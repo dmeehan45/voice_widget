@@ -119,7 +119,15 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  /* Key change: make the document background transparent for iframe embeds. */
+  html,
   body {
-    @apply bg-background text-foreground;
+    background: transparent;
+  }
+
+  /* Keep text color consistent with your theme tokens. */
+  body {
+    @apply text-foreground;
   }
 }
