@@ -43,8 +43,19 @@ export function VoiceWidget({
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
 
   return (
-    <div className={cn("relative mx-auto h-[600px] w-full", className)}>
-      <Card className="flex h-full w-full flex-col gap-0 overflow-hidden">
+    <div
+      className={cn(
+        "relative mx-auto h-[600px] w-full",
+        compact && "bg-transparent",
+        className
+      )}
+    >
+      <Card
+        className={cn(
+          "flex h-full w-full flex-col gap-0 overflow-hidden",
+          compact && "bg-transparent border-0 shadow-none"
+        )}
+      >
         <CardContent className="relative flex-1 overflow-hidden p-0">
           <Conversation className="absolute inset-0 pb-[88px]">
             <ConversationContent
@@ -92,10 +103,7 @@ export function VoiceWidget({
                                       message.content
                                     )
                                     setCopiedIndex(index)
-                                    setTimeout(
-                                      () => setCopiedIndex(null),
-                                      2000
-                                    )
+                                    setTimeout(() => setCopiedIndex(null), 2000)
                                   }}
                                 >
                                   {copiedIndex === index ? (
@@ -104,17 +112,13 @@ export function VoiceWidget({
                                     <CopyIcon className="size-4" />
                                   )}
                                   <span className="sr-only">
-                                    {copiedIndex === index
-                                      ? "Copied!"
-                                      : "Copy"}
+                                    {copiedIndex === index ? "Copied!" : "Copy"}
                                   </span>
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>
-                                  {copiedIndex === index
-                                    ? "Copied!"
-                                    : "Copy"}
+                                  {copiedIndex === index ? "Copied!" : "Copy"}
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -128,6 +132,7 @@ export function VoiceWidget({
             </ConversationContent>
             <ConversationScrollButton className="bottom-[100px]" />
           </Conversation>
+
           <div className="absolute right-0 bottom-0 left-0 flex justify-center">
             <ConversationBar
               className={cn("w-full", compact ? "" : "max-w-2xl")}
