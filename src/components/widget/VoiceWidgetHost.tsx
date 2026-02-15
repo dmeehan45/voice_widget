@@ -4,6 +4,11 @@ import { useMemo, useState } from "react"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { VoiceWidget } from "@/components/widget/VoiceWidget"
+import {
+  DEFAULT_UI_CONFIG,
+  UI_CONFIG_STORAGE_KEY,
+  parseStoredUiConfig,
+} from "@/components/widget/ui-config"
 
 const AGENT_ID_STORAGE_KEY = "voice_widget_agent_id"
 
@@ -21,6 +26,13 @@ function getStoredAgentId() {
 
 export function VoiceWidgetHost({ defaultAgentId }: VoiceWidgetHostProps) {
   const [agentId] = useState(() => getStoredAgentId() ?? defaultAgentId)
+  const [uiConfig] = useState(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_UI_CONFIG
+    }
+
+    return parseStoredUiConfig(window.localStorage.getItem(UI_CONFIG_STORAGE_KEY))
+  })
 
   const resolvedAgentId = useMemo(() => agentId?.trim(), [agentId])
 
@@ -40,7 +52,23 @@ export function VoiceWidgetHost({ defaultAgentId }: VoiceWidgetHostProps) {
     )
   }
 
-  return <VoiceWidget agentId={resolvedAgentId} />
+  return (
+    <VoiceWidget
+      agentId={resolvedAgentId}
+      compact={uiConfig.compact}
+      framed={uiConfig.framed}
+      rounded={uiConfig.rounded}
+      mode={uiConfig.mode}
+      supportLabel={uiConfig.brandLabel}
+      textInputPlaceholder={uiConfig.textInputPlaceholder}
+      emptyStateTitle={uiConfig.emptyStateTitle}
+      emptyStateDescription={uiConfig.emptyStateDescription}
+      orbColors={[uiConfig.orbPrimaryColor, uiConfig.orbSecondaryColor]}
+      assistantAvatarImageUrl={uiConfig.assistantAvatarImageUrl}
+      messageStyle={uiConfig.messageStyle}
+      className="mx-0 h-full w-full"
+    />
+  )
 }
 
 export { AGENT_ID_STORAGE_KEY }

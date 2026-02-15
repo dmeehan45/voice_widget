@@ -47,27 +47,27 @@
 }
 
 :root {
-  --font-geist-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-geist-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-geist-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --radius: 0.75rem;
+  --background: #e8e8e8;
+  --foreground: #090909;
+  --card: #efefef;
+  --card-foreground: #090909;
+  --popover: #f4f4f4;
+  --popover-foreground: #090909;
+  --primary: #c7eb68;
+  --primary-foreground: #090909;
+  --secondary: #ffffff;
+  --secondary-foreground: #090909;
+  --muted: #dfdfdf;
+  --muted-foreground: #424242;
+  --accent: #d8ef8a;
+  --accent-foreground: #090909;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: #0b0b0b;
+  --input: #0b0b0b;
+  --ring: #0b0b0b;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -122,6 +122,68 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+@layer components {
+  .site-shell {
+    @apply mx-auto w-full max-w-[1200px] px-5 pb-14 md:px-8 lg:px-10;
+  }
+
+  .site-header {
+    @apply flex items-center justify-between py-5 md:py-7;
+  }
+
+  .site-logo {
+    @apply flex items-center gap-3 text-3xl font-black tracking-tight;
+  }
+
+  .site-logo-mark {
+    @apply size-10 rounded-md border-4 border-black bg-primary;
+  }
+
+  .hero-title {
+    font-size: clamp(2.25rem, 8vw, 5.6rem);
+    line-height: 1;
+    @apply font-black tracking-tight;
+  }
+
+  .hero-copy {
+    font-size: clamp(1.125rem, 2.5vw, 2.1rem);
+    line-height: 1.35;
+    @apply text-foreground/90;
+  }
+
+  .fletch-panel {
+    @apply rounded-[20px] border-[3px] border-black bg-card shadow-[0_2px_0_0_#000];
+  }
+
+  .fletch-chip {
+    @apply inline-flex items-center rounded-[14px] border-[3px] border-black bg-white px-6 py-3 text-xl font-semibold;
+  }
+
+  .logo-cloud {
+    @apply grid grid-cols-2 gap-4 text-center text-2xl font-semibold tracking-wide opacity-75 md:grid-cols-5;
+  }
+
+  .section-stack {
+    @apply space-y-4 md:space-y-6;
+  }
+
+  .field-label {
+    @apply text-sm font-semibold text-foreground;
+  }
+
+  .field-input {
+    @apply border-2 border-black/15 bg-white h-11 w-full rounded-xl px-3 text-sm outline-none transition focus:border-black/45;
+  }
+
+  .field-select {
+    @apply border-2 border-black/15 bg-white h-11 rounded-xl px-3 text-sm outline-none transition focus:border-black/45;
+  }
+
+  .field-code {
+    @apply bg-white block w-full overflow-auto rounded-xl border-2 border-black/15 px-3 py-2 text-xs;
   }
 }

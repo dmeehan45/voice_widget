@@ -59,6 +59,21 @@ export interface ConversationBarProps {
    * Callback when user sends a message
    */
   onSendMessage?: (message: string) => void
+
+  /**
+   * Label displayed in the status tile when disconnected
+   */
+  brandLabel?: string
+
+  /**
+   * Placeholder shown in the text composer
+   */
+  textInputPlaceholder?: string
+
+  /**
+   * Controls whether the keyboard/text chat UI is available
+   */
+  allowTextInput?: boolean
 }
 
 export const ConversationBar = React.forwardRef<
@@ -75,6 +90,9 @@ export const ConversationBar = React.forwardRef<
       onError,
       onMessage,
       onSendMessage,
+      brandLabel = "Customer Support",
+      textInputPlaceholder = "Enter your message...",
+      allowTextInput = true,
     },
     ref
   ) => {
@@ -202,6 +220,12 @@ export const ConversationBar = React.forwardRef<
       }
     }, [])
 
+    React.useEffect(() => {
+      if (!allowTextInput) {
+        setKeyboardOpen(false)
+      }
+    }, [allowTextInput])
+
     return (
       <div
         ref={ref}
@@ -249,7 +273,7 @@ export const ConversationBar = React.forwardRef<
                         {agentState === "disconnected" && (
                           <div className="absolute inset-0 flex items-center justify-center">
                             <span className="text-foreground/50 text-[10px] font-medium">
-                              Customer Support
+                              {brandLabel}
                             </span>
                           </div>
                         )}
@@ -268,32 +292,36 @@ export const ConversationBar = React.forwardRef<
                   >
                     {isMuted ? <MicOff /> : <Mic />}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setKeyboardOpen((v) => !v)}
-                    aria-pressed={keyboardOpen}
-                    className="relative"
-                    disabled={!isConnected}
-                  >
-                    <Keyboard
-                      className={
-                        "h-5 w-5 transform-gpu transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] " +
-                        (keyboardOpen
-                          ? "scale-75 opacity-0"
-                          : "scale-100 opacity-100")
-                      }
-                    />
-                    <ChevronDown
-                      className={
-                        "absolute inset-0 m-auto h-5 w-5 transform-gpu transition-all delay-50 duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] " +
-                        (keyboardOpen
-                          ? "scale-100 opacity-100"
-                          : "scale-75 opacity-0")
-                      }
-                    />
-                  </Button>
-                  <Separator orientation="vertical" className="mx-1 -my-2.5" />
+                  {allowTextInput ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setKeyboardOpen((v) => !v)}
+                        aria-pressed={keyboardOpen}
+                        className="relative"
+                        disabled={!isConnected}
+                      >
+                        <Keyboard
+                          className={
+                            "h-5 w-5 transform-gpu transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] " +
+                            (keyboardOpen
+                              ? "scale-75 opacity-0"
+                              : "scale-100 opacity-100")
+                          }
+                        />
+                        <ChevronDown
+                          className={
+                            "absolute inset-0 m-auto h-5 w-5 transform-gpu transition-all delay-50 duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] " +
+                            (keyboardOpen
+                              ? "scale-100 opacity-100"
+                              : "scale-75 opacity-0")
+                          }
+                        />
+                      </Button>
+                      <Separator orientation="vertical" className="mx-1 -my-2.5" />
+                    </>
+                  ) : null}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -313,7 +341,7 @@ export const ConversationBar = React.forwardRef<
             <div
               className={cn(
                 "overflow-hidden transition-all duration-300 ease-out",
-                keyboardOpen ? "max-h-[120px]" : "max-h-0"
+                keyboardOpen && allowTextInput ? "max-h-[120px]" : "max-h-0"
               )}
             >
               <div className="relative px-2 pt-2 pb-2">
@@ -321,7 +349,7 @@ export const ConversationBar = React.forwardRef<
                   value={textInput}
                   onChange={handleTextChange}
                   onKeyDown={handleKeyDown}
-                  placeholder="Enter your message..."
+                  placeholder={textInputPlaceholder}
                   className="min-h-[100px] resize-none border-0 pr-12 shadow-none focus-visible:ring-0"
                   disabled={!isConnected}
                 />
