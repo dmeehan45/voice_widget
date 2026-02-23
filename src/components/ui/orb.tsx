@@ -94,13 +94,19 @@ function Scene({
   const { gl } = useThree()
   const circleRef =
     useRef<THREE.Mesh<THREE.CircleGeometry, THREE.ShaderMaterial>>(null)
-  const initialColorsRef = useRef<[string, string]>(colors)
   const targetColor1Ref = useRef(new THREE.Color(colors[0]))
   const targetColor2Ref = useRef(new THREE.Color(colors[1]))
   const animSpeedRef = useRef(0.1)
-  const perlinNoiseTexture = useTexture(
+  const basePerlinNoiseTexture = useTexture(
     "https://storage.googleapis.com/eleven-public-cdn/images/perlin-noise.png"
   )
+  const perlinNoiseTexture = useMemo(() => {
+    const texture = basePerlinNoiseTexture.clone()
+    texture.wrapS = THREE.RepeatWrapping
+    texture.wrapT = THREE.RepeatWrapping
+    texture.needsUpdate = true
+    return texture
+  }, [basePerlinNoiseTexture])
 
   const agentRef = useRef<AgentState>(agentState)
   const modeRef = useRef<"auto" | "manual">(volumeMode)
@@ -129,10 +135,7 @@ function Scene({
     )
   }, [manualOutput, outputVolumeRef, getOutputVolume])
 
-  const random = useMemo(
-    () => splitmix32(seed ?? Math.floor(Math.random() * 2 ** 32)),
-    [seed]
-  )
+  const random = useMemo(() => splitmix32(seed ?? 0x9e3779b9), [seed])
   const offsets = useMemo(
     () =>
       new Float32Array(Array.from({ length: 7 }, () => random() * Math.PI * 2)),
@@ -161,15 +164,44 @@ function Scene({
     return () => observer.disconnect()
   }, [])
 
+  const uniforms = useMemo(() => {
+    const isDark =
+      typeof document !== "undefined" &&
+      document.documentElement.classList.contains("dark")
+    return {
+      uColor1: new THREE.Uniform(new THREE.Color(colors[0])),
+      uColor2: new THREE.Uniform(new THREE.Color(colors[1])),
+      uOffsets: { value: offsets },
+      uPerlinTexture: new THREE.Uniform(perlinNoiseTexture),
+      uTime: new THREE.Uniform(0),
+      uAnimation: new THREE.Uniform(0.1),
+      uInverted: new THREE.Uniform(isDark ? 1 : 0),
+      uInputVolume: new THREE.Uniform(0),
+      uOutputVolume: new THREE.Uniform(0),
+      uOpacity: new THREE.Uniform(0),
+    }
+  }, [colors, perlinNoiseTexture, offsets])
+
+  const uniformsRef = useRef(uniforms)
+
+  useEffect(() => {
+    uniformsRef.current = uniforms
+  }, [uniforms])
+
+  useEffect(() => {
+    return () => {
+      perlinNoiseTexture.dispose()
+    }
+  }, [perlinNoiseTexture])
+
   useFrame((_, delta: number) => {
-    const mat = circleRef.current?.material
-    if (!mat) return
+    if (!circleRef.current) return
     const live = colorsRef?.current
     if (live) {
       if (live[0]) targetColor1Ref.current.set(live[0])
       if (live[1]) targetColor2Ref.current.set(live[1])
     }
-    const u = mat.uniforms
+    const u = uniformsRef.current
     u.uTime.value += delta * 0.5
 
     if (u.uOpacity.value < 1) {
@@ -229,26 +261,6 @@ function Scene({
     return () =>
       canvas.removeEventListener("webglcontextlost", onContextLost, false)
   }, [gl])
-
-  const uniforms = useMemo(() => {
-    perlinNoiseTexture.wrapS = THREE.RepeatWrapping
-    perlinNoiseTexture.wrapT = THREE.RepeatWrapping
-    const isDark =
-      typeof document !== "undefined" &&
-      document.documentElement.classList.contains("dark")
-    return {
-      uColor1: new THREE.Uniform(new THREE.Color(initialColorsRef.current[0])),
-      uColor2: new THREE.Uniform(new THREE.Color(initialColorsRef.current[1])),
-      uOffsets: { value: offsets },
-      uPerlinTexture: new THREE.Uniform(perlinNoiseTexture),
-      uTime: new THREE.Uniform(0),
-      uAnimation: new THREE.Uniform(0.1),
-      uInverted: new THREE.Uniform(isDark ? 1 : 0),
-      uInputVolume: new THREE.Uniform(0),
-      uOutputVolume: new THREE.Uniform(0),
-      uOpacity: new THREE.Uniform(0),
-    }
-  }, [perlinNoiseTexture, offsets])
 
   return (
     <mesh ref={circleRef}>

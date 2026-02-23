@@ -21,7 +21,15 @@ const MAX_HEIGHT = 900
 const DEFAULT_HEIGHT = 600
 
 interface EmbedWidgetPageProps {
-  searchParams: Record<string, string | undefined>
+  searchParams: Record<string, string | string[] | undefined>
+}
+
+function getSingleParam(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value[0]
+  }
+
+  return value
 }
 
 function parseBoolean(value: string | undefined, fallback: boolean) {
@@ -91,28 +99,41 @@ export function EmbedWidgetPage({ searchParams }: EmbedWidgetPageProps) {
   })
 
   const settings = useMemo(() => {
+    const params = {
+      agentId: getSingleParam(searchParams.agentId),
+      compact: getSingleParam(searchParams.compact),
+      framed: getSingleParam(searchParams.framed),
+      rounded: getSingleParam(searchParams.rounded),
+      height: getSingleParam(searchParams.height),
+      mode: getSingleParam(searchParams.mode),
+      brandLabel: getSingleParam(searchParams.brandLabel),
+      textInputPlaceholder: getSingleParam(searchParams.textInputPlaceholder),
+      emptyStateTitle: getSingleParam(searchParams.emptyStateTitle),
+      emptyStateDescription: getSingleParam(searchParams.emptyStateDescription),
+      orbPrimaryColor: getSingleParam(searchParams.orbPrimaryColor),
+      orbSecondaryColor: getSingleParam(searchParams.orbSecondaryColor),
+      assistantAvatarImageUrl: getSingleParam(searchParams.assistantAvatarImageUrl),
+      messageStyle: getSingleParam(searchParams.messageStyle),
+    }
+
     return {
-      agentId: searchParams.agentId?.trim(),
-      compact: parseBoolean(searchParams.compact, storedUiConfig.compact),
-      framed: parseBoolean(searchParams.framed, storedUiConfig.framed),
-      rounded: parseRounded(searchParams.rounded, storedUiConfig.rounded),
-      height: parseHeight(searchParams.height, storedUiConfig.height),
-      mode: parseMode(searchParams.mode) ?? storedUiConfig.mode,
-      brandLabel: searchParams.brandLabel ?? storedUiConfig.brandLabel,
+      agentId: params.agentId?.trim(),
+      compact: parseBoolean(params.compact, storedUiConfig.compact),
+      framed: parseBoolean(params.framed, storedUiConfig.framed),
+      rounded: parseRounded(params.rounded, storedUiConfig.rounded),
+      height: parseHeight(params.height, storedUiConfig.height),
+      mode: parseMode(params.mode) ?? storedUiConfig.mode,
+      brandLabel: params.brandLabel ?? storedUiConfig.brandLabel,
       textInputPlaceholder:
-        searchParams.textInputPlaceholder ?? storedUiConfig.textInputPlaceholder,
-      emptyStateTitle:
-        searchParams.emptyStateTitle ?? storedUiConfig.emptyStateTitle,
+        params.textInputPlaceholder ?? storedUiConfig.textInputPlaceholder,
+      emptyStateTitle: params.emptyStateTitle ?? storedUiConfig.emptyStateTitle,
       emptyStateDescription:
-        searchParams.emptyStateDescription ?? storedUiConfig.emptyStateDescription,
-      orbPrimaryColor:
-        searchParams.orbPrimaryColor ?? storedUiConfig.orbPrimaryColor,
-      orbSecondaryColor:
-        searchParams.orbSecondaryColor ?? storedUiConfig.orbSecondaryColor,
+        params.emptyStateDescription ?? storedUiConfig.emptyStateDescription,
+      orbPrimaryColor: params.orbPrimaryColor ?? storedUiConfig.orbPrimaryColor,
+      orbSecondaryColor: params.orbSecondaryColor ?? storedUiConfig.orbSecondaryColor,
       assistantAvatarImageUrl:
-        searchParams.assistantAvatarImageUrl ?? storedUiConfig.assistantAvatarImageUrl,
-      messageStyle:
-        parseMessageStyle(searchParams.messageStyle) ?? storedUiConfig.messageStyle,
+        params.assistantAvatarImageUrl ?? storedUiConfig.assistantAvatarImageUrl,
+      messageStyle: parseMessageStyle(params.messageStyle) ?? storedUiConfig.messageStyle,
     }
   }, [searchParams, storedUiConfig])
   const resolvedUiConfig = sanitizeWidgetUiConfig(settings)
