@@ -130,9 +130,9 @@ export function VoiceWidget({
                                     type="button"
                                     variant="ghost"
                                     onClick={() => {
-                                      navigator.clipboard.writeText(
-                                        message.content
-                                      )
+                                      void navigator.clipboard
+                                        .writeText(message.content)
+                                        .catch(() => undefined)
                                       setCopiedIndex(index)
                                       setTimeout(
                                         () => setCopiedIndex(null),
@@ -178,8 +178,14 @@ export function VoiceWidget({
               textInputPlaceholder={textInputPlaceholder}
               allowTextInput={!isVoiceOnly}
               agentId={agentId}
-              onConnect={() => setMessages([])}
-              onDisconnect={() => setMessages([])}
+              onConnect={() => {
+                setMessages([])
+                setCopiedIndex(null)
+              }}
+              onDisconnect={() => {
+                setMessages([])
+                setCopiedIndex(null)
+              }}
               onSendMessage={(message) => {
                 const userMessage: ChatMessage = {
                   role: "user",
