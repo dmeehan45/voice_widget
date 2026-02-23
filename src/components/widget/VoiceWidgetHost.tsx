@@ -21,7 +21,11 @@ function getStoredAgentId() {
     return undefined
   }
 
-  return window.localStorage.getItem(AGENT_ID_STORAGE_KEY)?.trim() || undefined
+  try {
+    return window.localStorage.getItem(AGENT_ID_STORAGE_KEY)?.trim() || undefined
+  } catch {
+    return undefined
+  }
 }
 
 export function VoiceWidgetHost({ defaultAgentId }: VoiceWidgetHostProps) {
@@ -31,7 +35,11 @@ export function VoiceWidgetHost({ defaultAgentId }: VoiceWidgetHostProps) {
       return DEFAULT_UI_CONFIG
     }
 
-    return parseStoredUiConfig(window.localStorage.getItem(UI_CONFIG_STORAGE_KEY))
+    try {
+      return parseStoredUiConfig(window.localStorage.getItem(UI_CONFIG_STORAGE_KEY))
+    } catch {
+      return DEFAULT_UI_CONFIG
+    }
   })
 
   const resolvedAgentId = useMemo(() => agentId?.trim(), [agentId])
