@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Voice Widget
 
-## Getting Started
+Self-hosted Next.js app for configuring, previewing, and embedding an ElevenLabs-powered voice/chat widget.
 
-First, run the development server:
+## What this repo provides
+- `/` — setup guide and progress checklist.
+- `/configure` — set agent ID, customize widget UI, and generate embed snippet.
+- `/embed` — embeddable host route that resolves query params + saved browser config.
+- `/voice-chat` — standalone full-page hosted experience.
 
+## Quick start
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Configuration flow
+1. Open `/configure`.
+2. Enter your ElevenLabs Agent ID.
+3. Customize widget options (mode, framing, labels, colors, avatar, etc.).
+4. Click **Save and deploy**.
+5. Copy either:
+   - direct `/embed?...` URL, or
+   - `<iframe ...>` embed code generated on the page.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Runtime precedence rules
+For `/embed`, runtime settings resolve in this order:
+1. query params,
+2. localStorage-saved UI config,
+3. defaults from `src/components/widget/ui-config.ts`.
 
-## Learn More
+Agent ID resolves in this order:
+1. `agentId` query param,
+2. browser-saved ID,
+3. `NEXT_PUBLIC_ELEVENLABS_AGENT_ID`.
 
-To learn more about Next.js, take a look at the following resources:
+## Environment
+Set this optional variable for default/fallback behavior:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+NEXT_PUBLIC_ELEVENLABS_AGENT_ID=your_agent_id
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Validation commands
+```bash
+npm run lint
+npm run build
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Notes for embedding
+- Ensure your deployed domain uses HTTPS so microphone permissions work reliably in browsers.
+- The generated iframe includes `allow="microphone"` and uses the configured widget height.

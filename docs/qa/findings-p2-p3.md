@@ -24,8 +24,11 @@
 - **Fix:** Add defensive `.catch(() => undefined)` on clipboard write call.
 - **Scope:** `src/components/widget/VoiceWidget.tsx`
 
-### P3-001 — Generic README lacks product-specific runbook
+### P3-001 — Generic README lacked product-specific runbook (fixed)
 - **Severity:** P3
-- **Status:** Known/defer
-- **Notes:** Low-impact documentation gap already captured in baseline reference.
+- **Status:** Fixed
+- **Repro (before):** Open `README.md`; content described generic create-next-app defaults instead of project workflows.
+- **Expected:** README should document setup, routes, config flow, precedence behavior, and verification commands for this project.
+- **Actual (before):** No project-specific operational runbook.
+- **Fix:** Replaced README with a focused voice-widget runbook for local setup, route map, runtime precedence, environment usage, and validation commands.
 - **Scope:** `README.md`

@@ -24,7 +24,12 @@
      - `npm run build` ✅
      - Playwright route checks on `/embed` and `/voice-chat` ✅
 
+4. **P3-001** — README product runbook documentation
+   - **Files changed:** `README.md`
+   - **Why:** Replace generic template docs with project-specific operational guidance.
+   - **Validation:**
+     - `npm run lint` ✅
+
 ## Deferred
 
-1. **P3-001** — README product runbook gap
-   - Deferred as non-critical documentation polish.
+- None currently.
