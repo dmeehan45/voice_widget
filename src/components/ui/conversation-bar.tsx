@@ -189,6 +189,23 @@ export const ConversationBar = React.forwardRef<
     }, [conversation, textInput, onSendMessage])
 
     const isConnected = agentState === "connected"
+    const isBusy = agentState === "connecting" || agentState === "disconnecting"
+
+    const statusLabel =
+      agentState === "connecting"
+        ? "Connecting…"
+        : agentState === "connected"
+          ? "Live now"
+          : agentState === "disconnecting"
+            ? "Ending…"
+            : "Ready to start"
+
+    const callActionLabel =
+      agentState === "connecting"
+        ? "Cancel connection"
+        : isConnected
+          ? "End call"
+          : "Start call"
 
     const handleTextChange = React.useCallback(
       (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -280,6 +297,12 @@ export const ConversationBar = React.forwardRef<
                       </div>
                     </div>
                   </div>
+                  <p
+                    className="text-muted-foreground min-w-[92px] text-[11px] font-medium"
+                    aria-live="polite"
+                  >
+                    {statusLabel}
+                  </p>
                 </div>
                 <div className="flex items-center">
                   <Button
@@ -287,8 +310,12 @@ export const ConversationBar = React.forwardRef<
                     size="icon"
                     onClick={toggleMute}
                     aria-pressed={isMuted}
-                    className={cn(isMuted ? "bg-foreground/5" : "")}
-                    disabled={!isConnected}
+                    aria-label={isMuted ? "Unmute microphone" : "Mute microphone"}
+                    className={cn(
+                      "active:scale-95 motion-reduce:transition-none",
+                      isMuted ? "bg-foreground/5" : ""
+                    )}
+                    disabled={!isConnected || isBusy}
                   >
                     {isMuted ? <MicOff /> : <Mic />}
                   </Button>
@@ -299,12 +326,15 @@ export const ConversationBar = React.forwardRef<
                         size="icon"
                         onClick={() => setKeyboardOpen((v) => !v)}
                         aria-pressed={keyboardOpen}
-                        className="relative"
-                        disabled={!isConnected}
+                        aria-label={
+                          keyboardOpen ? "Hide text composer" : "Show text composer"
+                        }
+                        className="relative active:scale-95 motion-reduce:transition-none"
+                        disabled={!isConnected || isBusy}
                       >
                         <Keyboard
                           className={
-                            "h-5 w-5 transform-gpu transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] " +
+                            "h-5 w-5 transform-gpu transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none " +
                             (keyboardOpen
                               ? "scale-75 opacity-0"
                               : "scale-100 opacity-100")
@@ -312,7 +342,7 @@ export const ConversationBar = React.forwardRef<
                         />
                         <ChevronDown
                           className={
-                            "absolute inset-0 m-auto h-5 w-5 transform-gpu transition-all delay-50 duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] " +
+                            "absolute inset-0 m-auto h-5 w-5 transform-gpu transition-all delay-50 duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none " +
                             (keyboardOpen
                               ? "scale-100 opacity-100"
                               : "scale-75 opacity-0")
@@ -326,6 +356,9 @@ export const ConversationBar = React.forwardRef<
                     variant="ghost"
                     size="icon"
                     onClick={handleStartOrEnd}
+                    aria-label={callActionLabel}
+                    aria-busy={isBusy}
+                    className="active:scale-95 motion-reduce:transition-none"
                     disabled={agentState === "disconnecting"}
                   >
                     {isConnected || agentState === "connecting" ? (
@@ -340,7 +373,7 @@ export const ConversationBar = React.forwardRef<
 
             <div
               className={cn(
-                "overflow-hidden transition-all duration-300 ease-out",
+                "overflow-hidden transition-all duration-200 ease-out motion-reduce:transition-none",
                 keyboardOpen && allowTextInput ? "max-h-[120px]" : "max-h-0"
               )}
             >
