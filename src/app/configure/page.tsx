@@ -69,8 +69,42 @@ export default function ConfigurePage() {
     setSaved(true)
   }
 
+  const copyWithFallback = (value: string) => {
+    const textarea = document.createElement("textarea")
+    textarea.value = value
+    textarea.setAttribute("readonly", "")
+    textarea.style.position = "absolute"
+    textarea.style.left = "-9999px"
+    document.body.appendChild(textarea)
+    textarea.select()
+
+    try {
+      return document.execCommand("copy")
+    } finally {
+      document.body.removeChild(textarea)
+    }
+  }
+
   const copyText = async (value: string, field: "url" | "code") => {
-    await navigator.clipboard.writeText(value)
+    let copied = false
+
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(value)
+        copied = true
+      } catch {
+        copied = false
+      }
+    }
+
+    if (!copied) {
+      copied = copyWithFallback(value)
+    }
+
+    if (!copied) {
+      return
+    }
+
     setCopiedField(field)
     window.setTimeout(() => setCopiedField(null), 2000)
   }

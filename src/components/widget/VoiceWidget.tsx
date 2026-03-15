@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { CheckIcon, CopyIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -62,6 +62,7 @@ export function VoiceWidget({
 }: VoiceWidgetProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const pendingUserEchoesRef = useRef<string[]>([])
   const isVoiceOnly = mode === "voice-only"
 
   return (
@@ -181,10 +182,12 @@ export function VoiceWidget({
               onConnect={() => {
                 setMessages([])
                 setCopiedIndex(null)
+                pendingUserEchoesRef.current = []
               }}
               onDisconnect={() => {
                 setMessages([])
                 setCopiedIndex(null)
+                pendingUserEchoesRef.current = []
               }}
               onSendMessage={(message) => {
                 const userMessage: ChatMessage = {
@@ -192,8 +195,18 @@ export function VoiceWidget({
                   content: message,
                 }
                 setMessages((prev) => [...prev, userMessage])
+                pendingUserEchoesRef.current.push(message.trim())
               }}
               onMessage={(message) => {
+                if (message.source === "user") {
+                  const normalizedMessage = message.message.trim()
+                  const nextExpected = pendingUserEchoesRef.current[0]
+                  if (nextExpected && nextExpected === normalizedMessage) {
+                    pendingUserEchoesRef.current.shift()
+                    return
+                  }
+                }
+
                 const newMessage: ChatMessage = {
                   role: message.source === "user" ? "user" : "assistant",
                   content: message.message,
