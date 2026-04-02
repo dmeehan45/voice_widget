@@ -25,8 +25,9 @@ export default function Page() {
 
       <section className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end">
         <div>
+          <p className="hero-kicker mb-4">Hosted Experience</p>
           <h1 className="text-4xl font-black tracking-tight md:text-5xl">Standalone Voice Chat</h1>
-          <p className="text-muted-foreground mt-3 text-lg">
+          <p className="text-muted-foreground editorial-copy mt-3 max-w-[48ch] text-lg">
             This page is the full hosted experience you can share directly.
           </p>
         </div>
@@ -35,7 +36,7 @@ export default function Page() {
         </Button>
       </section>
 
-      <section className="fletch-panel mt-8 p-3 md:p-5">
+      <section className="fletch-panel organic-offset mt-8 p-3 md:p-5">
         <VoiceWidgetHost defaultAgentId={AGENT_ID} />
       </section>
     </main>

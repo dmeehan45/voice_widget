@@ -100,7 +100,7 @@ export function VoiceWidget({
                 ) : (
                   messages.map((message, index) => {
                     return (
-                      <div key={index} className="flex w-full flex-col gap-1">
+                      <div key={index} className="motion-gentle flex w-full flex-col gap-1 animate-in fade-in slide-in-from-bottom-1 duration-200">
                         <Message from={message.role}>
                           <MessageContent
                             className="max-w-full min-w-0"
@@ -125,7 +125,7 @@ export function VoiceWidget({
                                 <TooltipTrigger asChild>
                                   <Button
                                     className={cn(
-                                      "text-muted-foreground hover:text-foreground relative size-9 p-1.5"
+                                      "text-muted-foreground hover:text-foreground motion-gentle relative size-9 p-1.5 hover:-translate-y-px"
                                     )}
                                     size="sm"
                                     type="button"
