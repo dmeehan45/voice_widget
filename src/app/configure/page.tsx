@@ -33,11 +33,6 @@ export default function ConfigurePage() {
   const [saved, setSaved] = useState(false)
   const [copiedField, setCopiedField] = useState<"url" | "code" | null>(null)
 
-  const updateUiConfig = (updater: (prev: WidgetUiConfig) => WidgetUiConfig) => {
-    setUiConfig(updater)
-    setSaved(false)
-  }
-
   const embedQuery = useMemo(() => {
     const params = new URLSearchParams()
     if (agentId.trim()) params.set("agentId", agentId.trim())
@@ -167,104 +162,13 @@ export default function ConfigurePage() {
             />
           </div>
 
-          <div className="grid gap-4 border-2 border-black/15 bg-white/50 p-4 text-sm md:p-5">
-            <p className="field-label">Widget UI setup</p>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Toggle label="Use compact layout" value={uiConfig.compact} onChange={(value) => {
-                updateUiConfig((prev) => ({ ...prev, compact: value }))
-              }} />
-              <Toggle label="Show frame and border" value={uiConfig.framed} onChange={(value) => {
-                updateUiConfig((prev) => ({ ...prev, framed: value }))
-              }} />
-
-              <Field label="Mode">
-                <select
-                  value={uiConfig.mode}
-                  className="field-select w-full"
-                  onChange={(event) => {
-                    updateUiConfig((prev) => ({ ...prev, mode: event.target.value as VoiceWidgetMode }))
-                  }}
-                >
-                  <option value="voice-chat">Voice + Chat</option>
-                  <option value="voice-only">Voice only</option>
-                </select>
-              </Field>
-
-              <Field label="Message style">
-                <select
-                  value={uiConfig.messageStyle}
-                  className="field-select w-full"
-                  onChange={(event) => {
-                    updateUiConfig((prev) => ({ ...prev, messageStyle: event.target.value as MessageStyle }))
-                  }}
-                >
-                  <option value="contained">Contained bubbles</option>
-                  <option value="flat">Flat bubbles</option>
-                </select>
-              </Field>
-
-              <Field label="Corner radius">
-                <select
-                  value={uiConfig.rounded}
-                  className="field-select w-full"
-                  onChange={(event) => {
-                    updateUiConfig((prev) => ({ ...prev, rounded: event.target.value as RoundedOption }))
-                  }}
-                >
-                  <option value="none">Square</option>
-                  <option value="md">Medium</option>
-                  <option value="xl">Rounded</option>
-                </select>
-              </Field>
-
-              <Field label="Widget height (px)">
-                <input
-                  type="number"
-                  min={UI_CONFIG_LIMITS.minHeight}
-                  max={UI_CONFIG_LIMITS.maxHeight}
-                  value={uiConfig.height}
-                  className="field-input w-28 text-right"
-                  onChange={(event) => {
-                    const nextValue = Number(event.target.value)
-                    updateUiConfig((prev) => ({
-                      ...prev,
-                      height: Number.isFinite(nextValue)
-                        ? Math.min(UI_CONFIG_LIMITS.maxHeight, Math.max(UI_CONFIG_LIMITS.minHeight, Math.round(nextValue)))
-                        : UI_CONFIG_LIMITS.defaultHeight,
-                    }))
-                  }}
-                />
-              </Field>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <InputField label="Brand label (status tile)" value={uiConfig.brandLabel} onChange={(value) => {
-                updateUiConfig((prev) => ({ ...prev, brandLabel: value }))
-              }} />
-              <InputField label="Text input placeholder" value={uiConfig.textInputPlaceholder} disabled={uiConfig.mode === "voice-only"} onChange={(value) => {
-                updateUiConfig((prev) => ({ ...prev, textInputPlaceholder: value }))
-              }} />
-              <InputField label="Empty state title" value={uiConfig.emptyStateTitle} disabled={uiConfig.mode === "voice-only"} onChange={(value) => {
-                updateUiConfig((prev) => ({ ...prev, emptyStateTitle: value }))
-              }} />
-              <InputField label="Empty state description" value={uiConfig.emptyStateDescription} disabled={uiConfig.mode === "voice-only"} onChange={(value) => {
-                updateUiConfig((prev) => ({ ...prev, emptyStateDescription: value }))
-              }} />
-              <InputField label="Assistant avatar image URL (optional)" value={uiConfig.assistantAvatarImageUrl} placeholder="https://..." onChange={(value) => {
-                updateUiConfig((prev) => ({ ...prev, assistantAvatarImageUrl: value }))
-              }} />
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <ColorField label="Orb primary color" value={uiConfig.orbPrimaryColor} onChange={(value) => {
-                updateUiConfig((prev) => ({ ...prev, orbPrimaryColor: value }))
-              }} />
-              <ColorField label="Orb secondary color" value={uiConfig.orbSecondaryColor} onChange={(value) => {
-                updateUiConfig((prev) => ({ ...prev, orbSecondaryColor: value }))
-              }} />
-            </div>
-          </div>
+          <WidgetConfigForm
+            uiConfig={uiConfig}
+            onChange={(next) => {
+              setUiConfig(next)
+              setSaved(false)
+            }}
+          />
 
           <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <Button type="button" variant="brand" className="w-full sm:w-auto" onClick={handleSave}>
