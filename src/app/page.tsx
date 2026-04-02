@@ -1,12 +1,23 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { Menu } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { HowItWorks } from "@/components/landing/HowItWorks"
 import { WizardShell } from "@/components/wizard/WizardShell"
 
 export default function Home() {
+  const [wizardStarted, setWizardStarted] = useState(false)
+  const wizardRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (wizardStarted) {
+      wizardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }, [wizardStarted])
+
   return (
     <main className="site-shell min-h-screen">
       <header className="site-header">
@@ -37,7 +48,13 @@ export default function Home() {
           </p>
         </div>
 
-        <WizardShell />
+        <HowItWorks onGetStarted={() => setWizardStarted(true)} />
+
+        {wizardStarted && (
+          <div ref={wizardRef} className="mt-16 scroll-mt-8">
+            <WizardShell />
+          </div>
+        )}
       </section>
     </main>
   )
