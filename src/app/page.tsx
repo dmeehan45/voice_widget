@@ -126,8 +126,9 @@ export default function Home() {
 
       <section className="grid gap-6 pt-4 md:grid-cols-[1.4fr_1fr] md:gap-8 md:pt-10">
         <div className="section-stack">
+          <p className="hero-kicker">Self-hosted setup kit</p>
           <h1 className="hero-title">Launch your white-label voice widget.</h1>
-          <p className="hero-copy">
+          <p className="hero-copy max-w-[34ch]">
             This setup guide walks you from domain deployment to embed code with a
             progress-driven checklist and one-click actions.
           </p>
@@ -141,7 +142,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="fletch-panel h-fit p-5 md:p-6">
+        <div className="fletch-panel organic-offset h-fit p-5 md:mt-3 md:p-6">
           <p className="text-sm font-semibold uppercase tracking-wide">
             Setup Progress
           </p>
@@ -161,12 +162,12 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mt-8 grid gap-4 md:mt-10">
+      <section className="mt-8 grid gap-4 md:mt-11">
         {SETUP_STEPS.map((step) => {
           const done = Boolean(progress[step.id])
 
           return (
-            <article key={step.id} className="fletch-panel p-5 md:p-6">
+            <article key={step.id} className="fletch-panel motion-gentle p-5 md:p-6 hover:-translate-y-px">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="max-w-3xl space-y-2">
                   <div className="flex items-center gap-3">

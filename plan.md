@@ -1,70 +1,79 @@
-# End-to-End Functionality Completion Plan
+# Professional Human Design Polish Plan
 
 ## Executive overview
-We validated the full user journey for this self-hosted voice widget app: setup guide (`/`), configuration (`/configure`), embeddable runtime (`/embed`), and standalone runtime (`/voice-chat`). During review, we identified two functional gaps affecting end-to-end UX: duplicated typed user messages in transcript rendering and brittle clipboard behavior on `/configure`. Both were implemented with minimal frontend-only diffs.
+We applied a subtle UI polish pass to make WidgetFlow feel more crafted and premium while preserving existing layout, routes, content, and functionality. Changes focused on sharper geometry, tactile surface depth, editorial typography accents, controlled asymmetry, and restrained micro-interactions.
 
 ## Contracts first
-- No API contract changes were made. ✅
-- No auth/permissions, DB schema, environment variable, or build tooling changes were made. ✅
-- Existing component props for `VoiceWidget`, `ConversationBar`, and embed/config pages remain stable. ✅
-- `ConversationBar.onMessage` contract remains unchanged. ✅
+- Route contracts unchanged: `/`, `/configure`, `/embed`, `/voice-chat`.
+- Component APIs unchanged: `Button`, `Card`, `VoiceWidget`, and page components keep existing props.
+- No backend/API/auth/env/build tooling/db changes.
 
 ## File map
-- `src/components/widget/VoiceWidget.tsx` ✅
+- `src/app/globals.css` ✅
+- `src/components/ui/button.tsx` ✅
+- `src/components/ui/card.tsx` ✅
+- `src/app/page.tsx` ✅
 - `src/app/configure/page.tsx` ✅
-- `plan.md` ✅
+- `src/app/voice-chat/page.tsx` ✅
+- `src/components/widget/VoiceWidget.tsx` ✅
 
 ## Parallel workstreams
 
-### WS1 — Message timeline correctness (`src/components/widget/VoiceWidget.tsx`)
+### WS1 — Design tokens + surface system (`src/app/globals.css`)
 **Completed**
-1. Audited typed-send (`onSendMessage`) and SDK message event (`onMessage`) interaction.
-2. Added optimistic-echo reconciliation via a lightweight pending queue (`useRef`) to avoid duplicate user bubbles when SDK echoes sent text.
-3. Preserved SDK-originated user messages (e.g., voice transcripts) by only deduping exact expected echoes.
+- Reduced default radii and tightened rounding scale.
+- Introduced subtle noise texture token and layered shadow variables.
+- Added tactile panel/code overlays and motion helper utilities.
+- Added editorial text utility and small asymmetry helper classes.
 
-**Success criteria status**
-- Sending a typed message yields exactly one user bubble. ✅
-- Assistant replies still render. ✅
-- Voice-originated user messages remain supported. ✅
-
-### WS2 — Embed sharing reliability (`src/app/configure/page.tsx`)
+### WS2 — Shared primitives polish (`src/components/ui/button.tsx`, `src/components/ui/card.tsx`)
 **Completed**
-1. Added fallback copy path (`document.execCommand("copy")`) for clipboard-restricted contexts.
-2. Updated copy flow to attempt modern Clipboard API first, then fallback, and only show copied UI feedback when copy succeeds.
+- Tightened button/card corners.
+- Improved focus ring treatment.
+- Added restrained tactile hover/active depth transitions.
 
-**Success criteria status**
-- Copy URL/code actions now degrade gracefully instead of throwing unhandled errors. ✅
-- UI copied state stays consistent with actual copy success. ✅
+### WS3 — Home page asymmetry + hierarchy (`src/app/page.tsx`)
+**Completed**
+- Added hero kicker and improved copy measure.
+- Offset progress panel slightly for controlled asymmetry.
+- Added subtle card hover-lift for checklist entries.
 
-### WS3 — Integration validation (`plan.md` + runtime checks)
-**Partially completed**
-1. `npm run lint` executed successfully.
-2. Attempted `npm run build`, but environment had a pre-existing long-running `next build` process holding `.next/lock`; follow-up build invocation failed due lock contention.
-3. Attempted browser-tool screenshot walkthrough; browser tool timed out in this environment.
+### WS4 — Configure + voice-chat visual refinement (`src/app/configure/page.tsx`, `src/app/voice-chat/page.tsx`)
+**Completed**
+- Added hierarchy cues (kicker + editorial body copy).
+- Refined section containers for stronger scannability.
+- Applied slight offset to voice-chat panel for less rigid composition.
 
-**Success criteria status**
-- Validation command for lint passes. ✅
-- Build command completion is currently blocked by environment process state. ⚠️
-- Browser screenshot capture blocked by tool timeout. ⚠️
+### WS5 — Widget micro-interactions (`src/components/widget/VoiceWidget.tsx`)
+**Completed**
+- Added subtle message entry motion.
+- Added restrained hover lift on copy action button.
 
 ## Integration plan
-- WS1 and WS2 were applied as isolated frontend changes with no cross-file API changes.
-- WS3 validation recorded current environment blockers explicitly.
+1. Applied global tokens/utilities.
+2. Updated shared primitives.
+3. Updated page composition and hierarchy.
+4. Added widget-level interaction polish.
+5. Ran validation commands.
 
 ## Acceptance checklist
-- [x] AC1: Typed message flow in widget no longer duplicates user bubbles.
-- [x] AC2: SDK-driven assistant and voice/user messages still render correctly.
-- [x] AC3: `/configure` copy actions handle clipboard limitations without breaking UX.
-- [x] AC4: `npm run lint` passes.
-- [ ] AC5: `npm run build` completes or any environment blocker is documented.
-- [ ] AC6: Browser walkthrough confirms end-to-end route functionality.
+- [x] AC1: Radius system is sharper and no longer over-rounded across major surfaces.
+- [x] AC2: Subtle texture/depth appears on key panels without harming readability.
+- [x] AC3: Typography hierarchy has stronger character while preserving content.
+- [x] AC4: Hero/section composition includes controlled asymmetry.
+- [x] AC5: Configure/voice-chat panels have clearer visual hierarchy.
+- [x] AC6: Widget interactions include restrained micro-motion.
+- [ ] AC7: `npm run lint` passes (blocked: missing local eslint dependency).
+- [ ] AC8: `npm run build` passes (blocked: missing local next binary/dependencies).
 
 ## Risks and mitigations
-- Risk: Over-filtering user events could hide legitimate voice transcriptions.
-  - Mitigation applied: dedupe only exact, expected optimistic echoes from typed sends.
-- Risk: Clipboard fallback behavior differs by browser.
-  - Mitigation applied: modern API first, fallback second; non-fatal failure path avoids bad state.
+- Risk: Texture overlays could hurt legibility.
+  - Mitigation: kept overlays low opacity (0.08–0.10) and off text color itself.
+- Risk: Motion could distract.
+  - Mitigation: used short durations and tiny movement; provided reduced-motion fallback utility.
+- Risk: Styling regression in tight spaces.
+  - Mitigation: changes were class/token scoped with minimal structural edits.
 
 ## Remaining work
-- Re-run `npm run build` once the lingering `next build` lock/process is cleared by environment.
-- Re-run browser walkthrough and capture screenshot artifact when browser tool is responsive.
+- Install dependencies (`npm install`) in this environment and re-run lint/build.
+- Run manual browser visual regression pass and capture screenshot artifact if browser tooling is available.

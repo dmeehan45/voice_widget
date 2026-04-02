@@ -132,8 +132,9 @@ export default function ConfigurePage() {
       <Card className="fletch-panel border-[3px] shadow-[0_2px_0_0_#000]">
         <CardContent className="space-y-6 p-5 md:space-y-8 md:p-8">
           <div className="section-stack">
+            <p className="hero-kicker">Customization Studio</p>
             <h1 className="text-4xl font-black tracking-tight">Configure Voice Widget</h1>
-            <p className="text-muted-foreground text-base">
+            <p className="text-muted-foreground editorial-copy max-w-[56ch] text-base">
               Save your ElevenLabs Agent ID, customize widget UI, and copy an
               embeddable snippet hosted on <code>/embed</code>.
             </p>
@@ -164,7 +165,7 @@ export default function ConfigurePage() {
             />
           </div>
 
-          <div className="grid gap-4 rounded-xl border-2 border-black/15 p-4 text-sm md:p-5">
+          <div className="grid gap-4 border-2 border-black/15 bg-white/50 p-4 text-sm md:p-5">
             <p className="field-label">Widget UI setup</p>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -293,7 +294,7 @@ export default function ConfigurePage() {
             )}
           </div>
 
-          <div className="space-y-3 rounded-xl border-2 border-black/15 p-4 text-sm md:p-5">
+          <div className="space-y-3 border-2 border-black/15 bg-white/40 p-4 text-sm md:p-5">
             <p className="field-label">Embeddable widget URL</p>
             <div className="flex flex-col gap-2 md:flex-row md:items-center">
               <code className="field-code flex-1">{embedPath}</code>
@@ -304,7 +305,7 @@ export default function ConfigurePage() {
             </div>
           </div>
 
-          <div className="space-y-3 rounded-xl border-2 border-black/15 p-4 text-sm md:p-5">
+          <div className="space-y-3 border-2 border-black/15 bg-white/40 p-4 text-sm md:p-5">
             <p className="field-label">Copy/paste iframe code</p>
             <div className="flex flex-col gap-2 md:flex-row md:items-start">
               <pre className="field-code max-h-48 flex-1 whitespace-pre-wrap p-3">{getEmbedCode(embedPath)}</pre>
@@ -388,7 +389,7 @@ function ColorField({
       <div className="flex gap-2">
         <input
           type="color"
-          className="h-10 w-12 rounded-xl border-2 border-black/20 bg-white"
+          className="h-10 w-12 border-2 border-black/20 bg-white"
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
