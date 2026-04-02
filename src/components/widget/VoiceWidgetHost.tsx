@@ -1,48 +1,18 @@
 "use client"
 
-import { useMemo, useState } from "react"
-
 import { Card, CardContent } from "@/components/ui/card"
 import { VoiceWidget } from "@/components/widget/VoiceWidget"
-import {
-  DEFAULT_UI_CONFIG,
-  UI_CONFIG_STORAGE_KEY,
-  parseStoredUiConfig,
-} from "@/components/widget/ui-config"
+import { useStoredWidgetConfig } from "@/components/widget/use-stored-widget-config"
 
-const AGENT_ID_STORAGE_KEY = "voice_widget_agent_id"
+export { AGENT_ID_STORAGE_KEY } from "@/components/widget/use-stored-widget-config"
 
 interface VoiceWidgetHostProps {
   defaultAgentId?: string
 }
 
-function getStoredAgentId() {
-  if (typeof window === "undefined") {
-    return undefined
-  }
-
-  try {
-    return window.localStorage.getItem(AGENT_ID_STORAGE_KEY)?.trim() || undefined
-  } catch {
-    return undefined
-  }
-}
-
 export function VoiceWidgetHost({ defaultAgentId }: VoiceWidgetHostProps) {
-  const [agentId] = useState(() => getStoredAgentId() ?? defaultAgentId)
-  const [uiConfig] = useState(() => {
-    if (typeof window === "undefined") {
-      return DEFAULT_UI_CONFIG
-    }
-
-    try {
-      return parseStoredUiConfig(window.localStorage.getItem(UI_CONFIG_STORAGE_KEY))
-    } catch {
-      return DEFAULT_UI_CONFIG
-    }
-  })
-
-  const resolvedAgentId = useMemo(() => agentId?.trim(), [agentId])
+  const { storedAgentId, storedUiConfig: uiConfig } = useStoredWidgetConfig()
+  const resolvedAgentId = storedAgentId ?? defaultAgentId
 
   if (!resolvedAgentId) {
     return (
@@ -78,5 +48,3 @@ export function VoiceWidgetHost({ defaultAgentId }: VoiceWidgetHostProps) {
     />
   )
 }
-
-export { AGENT_ID_STORAGE_KEY }
