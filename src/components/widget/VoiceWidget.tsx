@@ -19,7 +19,6 @@ import { Response } from "@/components/ui/response"
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { type MessageStyle, type VoiceWidgetMode } from "@/components/widget/ui-config"
@@ -120,8 +119,7 @@ export function VoiceWidget({
                         </Message>
                         {message.role === "assistant" && (
                           <div className="flex items-center gap-1">
-                            <TooltipProvider>
-                              <Tooltip>
+                            <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
                                     className={cn(
@@ -160,8 +158,7 @@ export function VoiceWidget({
                                       : "Copy"}
                                   </p>
                                 </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            </Tooltip>
                           </div>
                         )}
                       </div>
