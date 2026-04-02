@@ -9,14 +9,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { AGENT_ID_STORAGE_KEY } from "@/components/widget/VoiceWidgetHost"
 import {
   DEFAULT_UI_CONFIG,
-  UI_CONFIG_LIMITS,
   UI_CONFIG_STORAGE_KEY,
-  type MessageStyle,
-  type RoundedOption,
-  type VoiceWidgetMode,
   type WidgetUiConfig,
   parseStoredUiConfig,
 } from "@/components/widget/ui-config"
+import { WidgetConfigForm } from "@/components/wizard/WidgetConfigForm"
 
 const DEFAULT_AGENT_ID = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID ?? ""
 
@@ -165,117 +162,13 @@ export default function ConfigurePage() {
             />
           </div>
 
-          <div className="grid gap-4 border-2 border-black/15 bg-white/50 p-4 text-sm md:p-5">
-            <p className="field-label">Widget UI setup</p>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Toggle label="Use compact layout" value={uiConfig.compact} onChange={(value) => {
-                setUiConfig((prev) => ({ ...prev, compact: value }))
-                setSaved(false)
-              }} />
-              <Toggle label="Show frame and border" value={uiConfig.framed} onChange={(value) => {
-                setUiConfig((prev) => ({ ...prev, framed: value }))
-                setSaved(false)
-              }} />
-
-              <Field label="Mode">
-                <select
-                  value={uiConfig.mode}
-                  className="field-select w-full"
-                  onChange={(event) => {
-                    setUiConfig((prev) => ({ ...prev, mode: event.target.value as VoiceWidgetMode }))
-                    setSaved(false)
-                  }}
-                >
-                  <option value="voice-chat">Voice + Chat</option>
-                  <option value="voice-only">Voice only</option>
-                </select>
-              </Field>
-
-              <Field label="Message style">
-                <select
-                  value={uiConfig.messageStyle}
-                  className="field-select w-full"
-                  onChange={(event) => {
-                    setUiConfig((prev) => ({ ...prev, messageStyle: event.target.value as MessageStyle }))
-                    setSaved(false)
-                  }}
-                >
-                  <option value="contained">Contained bubbles</option>
-                  <option value="flat">Flat bubbles</option>
-                </select>
-              </Field>
-
-              <Field label="Corner radius">
-                <select
-                  value={uiConfig.rounded}
-                  className="field-select w-full"
-                  onChange={(event) => {
-                    setUiConfig((prev) => ({ ...prev, rounded: event.target.value as RoundedOption }))
-                    setSaved(false)
-                  }}
-                >
-                  <option value="none">Square</option>
-                  <option value="md">Medium</option>
-                  <option value="xl">Rounded</option>
-                </select>
-              </Field>
-
-              <Field label="Widget height (px)">
-                <input
-                  type="number"
-                  min={UI_CONFIG_LIMITS.minHeight}
-                  max={UI_CONFIG_LIMITS.maxHeight}
-                  value={uiConfig.height}
-                  className="field-input w-28 text-right"
-                  onChange={(event) => {
-                    const nextValue = Number(event.target.value)
-                    setUiConfig((prev) => ({
-                      ...prev,
-                      height: Number.isFinite(nextValue)
-                        ? Math.min(UI_CONFIG_LIMITS.maxHeight, Math.max(UI_CONFIG_LIMITS.minHeight, Math.round(nextValue)))
-                        : UI_CONFIG_LIMITS.defaultHeight,
-                    }))
-                    setSaved(false)
-                  }}
-                />
-              </Field>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <InputField label="Brand label (status tile)" value={uiConfig.brandLabel} onChange={(value) => {
-                setUiConfig((prev) => ({ ...prev, brandLabel: value }))
-                setSaved(false)
-              }} />
-              <InputField label="Text input placeholder" value={uiConfig.textInputPlaceholder} disabled={uiConfig.mode === "voice-only"} onChange={(value) => {
-                setUiConfig((prev) => ({ ...prev, textInputPlaceholder: value }))
-                setSaved(false)
-              }} />
-              <InputField label="Empty state title" value={uiConfig.emptyStateTitle} disabled={uiConfig.mode === "voice-only"} onChange={(value) => {
-                setUiConfig((prev) => ({ ...prev, emptyStateTitle: value }))
-                setSaved(false)
-              }} />
-              <InputField label="Empty state description" value={uiConfig.emptyStateDescription} disabled={uiConfig.mode === "voice-only"} onChange={(value) => {
-                setUiConfig((prev) => ({ ...prev, emptyStateDescription: value }))
-                setSaved(false)
-              }} />
-              <InputField label="Assistant avatar image URL (optional)" value={uiConfig.assistantAvatarImageUrl} placeholder="https://..." onChange={(value) => {
-                setUiConfig((prev) => ({ ...prev, assistantAvatarImageUrl: value }))
-                setSaved(false)
-              }} />
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <ColorField label="Orb primary color" value={uiConfig.orbPrimaryColor} onChange={(value) => {
-                setUiConfig((prev) => ({ ...prev, orbPrimaryColor: value }))
-                setSaved(false)
-              }} />
-              <ColorField label="Orb secondary color" value={uiConfig.orbSecondaryColor} onChange={(value) => {
-                setUiConfig((prev) => ({ ...prev, orbSecondaryColor: value }))
-                setSaved(false)
-              }} />
-            </div>
-          </div>
+          <WidgetConfigForm
+            uiConfig={uiConfig}
+            onChange={(next) => {
+              setUiConfig(next)
+              setSaved(false)
+            }}
+          />
 
           <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <Button type="button" variant="brand" className="w-full sm:w-auto" onClick={handleSave}>
@@ -321,84 +214,3 @@ export default function ConfigurePage() {
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex items-center justify-between gap-3">
-      <span>{label}</span>
-      {children}
-    </label>
-  )
-}
-
-function Toggle({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: boolean
-  onChange: (next: boolean) => void
-}) {
-  return (
-    <label className="flex items-center justify-between gap-3">
-      <span>{label}</span>
-      <input type="checkbox" checked={value} onChange={(event) => onChange(event.target.checked)} />
-    </label>
-  )
-}
-
-function InputField({
-  label,
-  value,
-  placeholder,
-  disabled,
-  onChange,
-}: {
-  label: string
-  value: string
-  placeholder?: string
-  disabled?: boolean
-  onChange: (next: string) => void
-}) {
-  return (
-    <label className="grid gap-1">
-      <span>{label}</span>
-      <input
-        className="field-input"
-        value={value}
-        placeholder={placeholder}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </label>
-  )
-}
-
-function ColorField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: string
-  onChange: (next: string) => void
-}) {
-  return (
-    <label className="grid gap-1">
-      <span>{label}</span>
-      <div className="flex gap-2">
-        <input
-          type="color"
-          className="h-10 w-12 border-2 border-black/20 bg-white"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-        <input
-          className="field-input flex-1"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      </div>
-    </label>
-  )
-}
