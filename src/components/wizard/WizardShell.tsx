@@ -42,7 +42,7 @@ export function WizardShell() {
     setState((prev) => ({ ...prev, ...patch }))
 
   return (
-    <div className="mx-auto w-full max-w-4xl">
+    <div className="content-column">
       {/* Progress bar */}
       <nav className="mb-8 flex items-center gap-1" aria-label="Setup progress">
         {STEP_LABELS.map((label, i) => {

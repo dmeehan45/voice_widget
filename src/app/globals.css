@@ -141,7 +141,11 @@
   }
 
   .site-logo {
-    @apply flex items-center gap-3 text-3xl font-black tracking-[-0.02em];
+    @apply flex items-center gap-2 text-xl font-black tracking-[-0.02em] md:gap-3 md:text-2xl;
+  }
+
+  .content-column {
+    @apply mx-auto w-full max-w-4xl;
   }
 
   .site-logo-mark {
@@ -150,13 +154,13 @@
   }
 
   .hero-title {
-    font-size: clamp(2.25rem, 8vw, 5.6rem);
+    font-size: clamp(2.25rem, 6vw, 4rem);
     line-height: 0.96;
     @apply font-black tracking-[-0.03em];
   }
 
   .hero-copy {
-    font-size: clamp(1.125rem, 2.5vw, 2.1rem);
+    font-size: clamp(1.125rem, 2vw, 1.5rem);
     line-height: 1.42;
     @apply text-foreground/90;
     font-family: var(--font-editorial);

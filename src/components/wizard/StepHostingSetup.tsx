@@ -130,7 +130,7 @@ function SelfHostedSetup({
         <DeployStep
           number={1}
           title="Deploy this app"
-          description="Deploy the WidgetFlow repository to your hosting provider."
+          description="Deploy the White Label VoiceWidget repository to your hosting provider."
         >
           <div className="flex flex-wrap gap-2">
             <a

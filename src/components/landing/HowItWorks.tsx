@@ -35,7 +35,7 @@ const PHASES = [
 
 export function HowItWorks({ onGetStarted }: HowItWorksProps) {
   return (
-    <section className="mx-auto w-full max-w-4xl">
+    <section className="content-column">
       {/* Section header */}
       <div className="section-stack mb-8">
         <p className="hero-kicker">How it works</p>
