@@ -23,7 +23,7 @@ export default function Home() {
       <header className="site-header">
         <div className="site-logo">
           <span className="site-logo-mark" />
-          <span>WidgetFlow</span>
+          <span>White Label VoiceWidget</span>
         </div>
         <div className="flex items-center gap-2 md:gap-3">
           <Button asChild variant="brandOutline" className="hidden sm:inline-flex">
@@ -39,7 +39,7 @@ export default function Home() {
       </header>
 
       <section className="pt-4 md:pt-10">
-        <div className="section-stack mb-8">
+        <div className="content-column section-stack mb-8">
           <p className="hero-kicker">White-label voice widget</p>
           <h1 className="hero-title">Launch your voice widget.</h1>
           <p className="hero-copy max-w-[42ch]">

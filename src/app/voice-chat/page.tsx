@@ -11,7 +11,7 @@ export default function Page() {
       <header className="site-header">
         <div className="site-logo">
           <span className="site-logo-mark" />
-          <span>WidgetFlow</span>
+          <span>White Label VoiceWidget</span>
         </div>
         <div className="flex items-center gap-2 md:gap-3">
           <Button asChild variant="brandOutline" className="hidden sm:inline-flex">

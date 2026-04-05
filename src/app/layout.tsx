@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "WidgetFlow",
+  title: "White Label VoiceWidget",
   description: "White-label ElevenLabs voice widget setup and embedding tool",
 }
 
