@@ -29,7 +29,7 @@ const PHASES = [
     icon: Code2,
     title: "Grab your embed code",
     description:
-      "Copy a single iframe snippet and paste it into any website. Your voice widget goes live instantly.",
+      "Copy a single snippet — floating launcher or inline iframe — and paste it into any website. Your voice widget goes live instantly.",
   },
 ]
 

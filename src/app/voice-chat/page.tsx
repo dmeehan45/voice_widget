@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
+import { SiteHeader } from "@/components/layout/SiteHeader"
 import { VoiceWidgetHost } from "@/components/widget/VoiceWidgetHost"
 
 const AGENT_ID = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID
@@ -8,20 +9,7 @@ const AGENT_ID = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID
 export default function Page() {
   return (
     <main className="site-shell min-h-screen">
-      <header className="site-header">
-        <div className="site-logo">
-          <span className="site-logo-mark" />
-          <span>White Label VoiceWidget</span>
-        </div>
-        <div className="flex items-center gap-2 md:gap-3">
-          <Button asChild variant="brandOutline" className="hidden sm:inline-flex">
-            <Link href="/">Setup Guide</Link>
-          </Button>
-          <Button asChild variant="brand" className="w-full sm:w-auto">
-            <Link href="/configure">Configure</Link>
-          </Button>
-        </div>
-      </header>
+      <SiteHeader />
 
       <section className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end">
         <div>

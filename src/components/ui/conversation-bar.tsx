@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useConversation } from "@elevenlabs/react"
+import type { Language } from "@elevenlabs/client"
 import {
   ArrowUpIcon,
   ChevronDown,
@@ -18,6 +19,14 @@ import { Card } from "@/components/ui/card"
 import { LiveWaveform } from "@/components/ui/live-waveform"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
+
+export type AgentSessionState =
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "disconnecting"
+
+export type SessionKind = "voice" | "text"
 
 export interface ConversationBarProps {
   /**
@@ -61,7 +70,15 @@ export interface ConversationBarProps {
   onSendMessage?: (message: string) => void
 
   /**
-   * Label displayed in the status tile when disconnected
+   * Callback whenever the session state or kind changes
+   */
+  onSessionStateChange?: (
+    state: AgentSessionState,
+    kind: SessionKind | null
+  ) => void
+
+  /**
+   * Label displayed in the status tile when no voice call is active
    */
   brandLabel?: string
 
@@ -74,7 +91,38 @@ export interface ConversationBarProps {
    * Controls whether the keyboard/text chat UI is available
    */
   allowTextInput?: boolean
+
+  /**
+   * Optional agent language override (requires the override to be enabled
+   * in the ElevenLabs agent security settings)
+   */
+  languageOverride?: string
 }
+
+function toError(error: unknown): Error {
+  if (error instanceof Error) return error
+  return new Error(typeof error === "string" ? error : JSON.stringify(error))
+}
+
+function describeMicError(error: unknown): string {
+  if (error instanceof DOMException) {
+    if (error.name === "NotAllowedError" || error.name === "SecurityError") {
+      return "Microphone access is blocked. Allow microphone access for this page in your browser settings, then try again."
+    }
+    if (error.name === "NotFoundError" || error.name === "OverconstrainedError") {
+      return "No microphone was found. Connect a microphone and try again, or send a text message instead."
+    }
+    if (error.name === "NotReadableError") {
+      return "Your microphone appears to be in use by another application."
+    }
+  }
+  return "Could not access your microphone. Check your browser permissions and try again."
+}
+
+const CONNECT_ERROR_MESSAGE =
+  "Could not connect to the assistant right now. Check your connection and try again."
+const SESSION_ERROR_MESSAGE =
+  "The conversation ended unexpectedly. Please try again."
 
 export const ConversationBar = React.forwardRef<
   HTMLDivElement,
@@ -90,28 +138,42 @@ export const ConversationBar = React.forwardRef<
       onError,
       onMessage,
       onSendMessage,
+      onSessionStateChange,
       brandLabel = "Customer Support",
       textInputPlaceholder = "Enter your message...",
       allowTextInput = true,
+      languageOverride,
     },
     ref
   ) => {
     const [isMuted, setIsMuted] = React.useState(false)
-    const [agentState, setAgentState] = React.useState<
-      "disconnected" | "connecting" | "connected" | "disconnecting" | null
-    >("disconnected")
+    const [agentState, setAgentState] =
+      React.useState<AgentSessionState>("disconnected")
+    const [sessionKind, setSessionKind] = React.useState<SessionKind | null>(
+      null
+    )
+    const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
     const [keyboardOpen, setKeyboardOpen] = React.useState(false)
     const [textInput, setTextInput] = React.useState("")
     const mediaStreamRef = React.useRef<MediaStream | null>(null)
+    const pendingTextRef = React.useRef<string | null>(null)
+    const lastActivityPingRef = React.useRef(0)
+
+    const releaseMicStream = React.useCallback(() => {
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop())
+      mediaStreamRef.current = null
+    }, [])
 
     const conversation = useConversation({
       onConnect: () => {
+        setErrorMessage(null)
         onConnect?.()
       },
       onDisconnect: () => {
         setAgentState("disconnected")
+        setSessionKind(null)
+        releaseMicStream()
         onDisconnect?.()
-        setKeyboardOpen(false)
       },
       onMessage: (message) => {
         onMessage?.(message)
@@ -120,15 +182,20 @@ export const ConversationBar = React.forwardRef<
       onError: (error: unknown) => {
         console.error("Error:", error)
         setAgentState("disconnected")
-        const errorObj =
-          error instanceof Error
-            ? error
-            : new Error(
-                typeof error === "string" ? error : JSON.stringify(error)
-              )
-        onError?.(errorObj)
+        setSessionKind(null)
+        releaseMicStream()
+        setErrorMessage(SESSION_ERROR_MESSAGE)
+        onError?.(toError(error))
       },
     })
+
+    const sessionOverrides = React.useMemo(
+      () =>
+        languageOverride
+          ? { agent: { language: languageOverride as Language } }
+          : undefined,
+      [languageOverride]
+    )
 
     const getMicStream = React.useCallback(async () => {
       if (mediaStreamRef.current) return mediaStreamRef.current
@@ -139,33 +206,94 @@ export const ConversationBar = React.forwardRef<
       return stream
     }, [])
 
-    const startConversation = React.useCallback(async () => {
+    const startVoiceConversation = React.useCallback(async () => {
+      setErrorMessage(null)
+      setAgentState("connecting")
+      setSessionKind("voice")
+
       try {
-        setAgentState("connecting")
-
         await getMicStream()
+      } catch (error) {
+        console.error("Microphone access failed:", error)
+        releaseMicStream()
+        setAgentState("disconnected")
+        setSessionKind(null)
+        setErrorMessage(describeMicError(error))
+        onError?.(toError(error))
+        return
+      }
 
+      try {
         await conversation.startSession({
           agentId,
           connectionType: "webrtc",
+          overrides: sessionOverrides,
           onStatusChange: (status) => setAgentState(status.status),
         })
       } catch (error) {
         console.error("Error starting conversation:", error)
         setAgentState("disconnected")
-        onError?.(error as Error)
+        setSessionKind(null)
+        setErrorMessage(CONNECT_ERROR_MESSAGE)
+        onError?.(toError(error))
+      } finally {
+        // The SDK captures its own microphone stream; ours only existed to
+        // surface the permission prompt early. Never keep the mic hot.
+        releaseMicStream()
       }
-    }, [conversation, getMicStream, agentId, onError])
+    }, [
+      agentId,
+      conversation,
+      getMicStream,
+      onError,
+      releaseMicStream,
+      sessionOverrides,
+    ])
+
+    const startTextConversation = React.useCallback(async () => {
+      setErrorMessage(null)
+      setAgentState("connecting")
+      setSessionKind("text")
+
+      try {
+        await conversation.startSession({
+          agentId,
+          connectionType: "websocket",
+          textOnly: true,
+          overrides: sessionOverrides,
+          onStatusChange: (status) => setAgentState(status.status),
+        })
+      } catch (error) {
+        console.error("Error starting text conversation:", error)
+        const hadPending = pendingTextRef.current !== null
+        pendingTextRef.current = null
+        setAgentState("disconnected")
+        setSessionKind(null)
+        setErrorMessage(
+          hadPending
+            ? `${CONNECT_ERROR_MESSAGE} Your message was not delivered.`
+            : CONNECT_ERROR_MESSAGE
+        )
+        onError?.(toError(error))
+      }
+    }, [agentId, conversation, onError, sessionOverrides])
+
+    // Deliver a message queued while the session was still connecting.
+    React.useEffect(() => {
+      if (agentState === "connected" && pendingTextRef.current !== null) {
+        const pending = pendingTextRef.current
+        pendingTextRef.current = null
+        conversation.sendUserMessage(pending)
+      }
+    }, [agentState, conversation])
 
     const handleEndSession = React.useCallback(() => {
       conversation.endSession()
       setAgentState("disconnected")
-
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((t) => t.stop())
-        mediaStreamRef.current = null
-      }
-    }, [conversation])
+      setSessionKind(null)
+      pendingTextRef.current = null
+      releaseMicStream()
+    }, [conversation, releaseMicStream])
 
     const toggleMute = React.useCallback(() => {
       setIsMuted((prev) => !prev)
@@ -175,27 +303,38 @@ export const ConversationBar = React.forwardRef<
       if (agentState === "connected" || agentState === "connecting") {
         handleEndSession()
       } else if (agentState === "disconnected") {
-        startConversation()
+        void startVoiceConversation()
       }
-    }, [agentState, handleEndSession, startConversation])
+    }, [agentState, handleEndSession, startVoiceConversation])
 
     const handleSendText = React.useCallback(() => {
-      if (!textInput.trim()) return
+      const messageToSend = textInput.trim()
+      if (!messageToSend) return
 
-      const messageToSend = textInput
-      conversation.sendUserMessage(messageToSend)
+      if (agentState === "connected") {
+        conversation.sendUserMessage(messageToSend)
+      } else if (agentState === "disconnected") {
+        pendingTextRef.current = messageToSend
+        void startTextConversation()
+      } else {
+        return
+      }
+
       setTextInput("")
       onSendMessage?.(messageToSend)
-    }, [conversation, textInput, onSendMessage])
+    }, [agentState, conversation, onSendMessage, startTextConversation, textInput])
 
     const isConnected = agentState === "connected"
     const isBusy = agentState === "connecting" || agentState === "disconnecting"
+    const isVoiceLive = sessionKind === "voice" && isConnected
 
     const statusLabel =
       agentState === "connecting"
         ? "Connecting…"
         : agentState === "connected"
-          ? "Live now"
+          ? sessionKind === "text"
+            ? "Chat live"
+            : "Live now"
           : agentState === "disconnecting"
             ? "Ending…"
             : "Ready to start"
@@ -204,16 +343,24 @@ export const ConversationBar = React.forwardRef<
       agentState === "connecting"
         ? "Cancel connection"
         : isConnected
-          ? "End call"
-          : "Start call"
+          ? sessionKind === "text"
+            ? "End chat"
+            : "End call"
+          : "Start voice call"
 
     const handleTextChange = React.useCallback(
       (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const value = e.target.value
         setTextInput(value)
 
-        if (value.trim() && isConnected) {
-          conversation.sendContextualUpdate(value)
+        // Let the agent know the user is typing (throttled) without ever
+        // transmitting unsent draft text.
+        if (isConnected && value.trim()) {
+          const now = Date.now()
+          if (now - lastActivityPingRef.current > 2000) {
+            lastActivityPingRef.current = now
+            conversation.sendUserActivity()
+          }
         }
       },
       [conversation, isConnected]
@@ -231,11 +378,9 @@ export const ConversationBar = React.forwardRef<
 
     React.useEffect(() => {
       return () => {
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current.getTracks().forEach((t) => t.stop())
-        }
+        releaseMicStream()
       }
-    }, [])
+    }, [releaseMicStream])
 
     React.useEffect(() => {
       if (!allowTextInput) {
@@ -243,24 +388,47 @@ export const ConversationBar = React.forwardRef<
       }
     }, [allowTextInput])
 
+    React.useEffect(() => {
+      onSessionStateChange?.(agentState, sessionKind)
+    }, [agentState, sessionKind, onSessionStateChange])
+
     return (
       <div
         ref={ref}
-        className={cn("flex w-full items-end justify-center p-4", className)}
+        className={cn(
+          "flex w-full flex-col items-stretch justify-end gap-2 p-4",
+          className
+        )}
       >
+        {errorMessage && (
+          <div
+            role="alert"
+            className="border-destructive/50 bg-card flex items-start justify-between gap-2 rounded-md border-2 px-3 py-2 text-xs font-medium shadow-sm"
+          >
+            <span className="min-w-0">{errorMessage}</span>
+            <button
+              type="button"
+              aria-label="Dismiss error"
+              className="shrink-0 opacity-60 transition-opacity hover:opacity-100"
+              onClick={() => setErrorMessage(null)}
+            >
+              <XIcon className="size-3.5" />
+            </button>
+          </div>
+        )}
         <Card className="m-0 w-full gap-0 border p-0 shadow-lg">
           <div className="flex flex-col-reverse">
             <div>
               {keyboardOpen && <Separator />}
               <div className="flex items-center justify-between gap-2 p-2">
-                <div className="h-8 w-[120px] md:h-10">
+                <div className="min-w-0 flex-1 md:max-w-[240px]">
                   <div
                     className={cn(
-                      "flex h-full items-center gap-2 rounded-md py-1",
+                      "flex h-8 items-center gap-2 rounded-md py-1 md:h-10",
                       "bg-foreground/5 text-foreground/70"
                     )}
                   >
-                    <div className="h-full flex-1">
+                    <div className="h-full min-w-0 flex-1">
                       <div
                         className={cn(
                           "relative flex h-full w-full shrink-0 items-center justify-center overflow-hidden rounded-sm",
@@ -268,11 +436,12 @@ export const ConversationBar = React.forwardRef<
                         )}
                       >
                         <LiveWaveform
-                          key={
-                            agentState === "disconnected" ? "idle" : "active"
+                          key={isVoiceLive ? "active" : "idle"}
+                          active={isVoiceLive && !isMuted}
+                          processing={
+                            sessionKind === "voice" &&
+                            agentState === "connecting"
                           }
-                          active={isConnected && !isMuted}
-                          processing={agentState === "connecting"}
                           barWidth={3}
                           barGap={1}
                           barRadius={4}
@@ -284,12 +453,15 @@ export const ConversationBar = React.forwardRef<
                           mode="static"
                           className={cn(
                             "h-full w-full transition-opacity duration-300",
-                            agentState === "disconnected" && "opacity-0"
+                            !isVoiceLive && "opacity-0"
                           )}
                         />
-                        {agentState === "disconnected" && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-foreground/50 text-[10px] font-medium">
+                        {!isVoiceLive && sessionKind !== "voice" && (
+                          <div className="absolute inset-0 flex items-center justify-center px-2">
+                            <span
+                              className="text-foreground/50 truncate text-[10px] font-medium"
+                              title={brandLabel}
+                            >
                               {brandLabel}
                             </span>
                           </div>
@@ -298,7 +470,7 @@ export const ConversationBar = React.forwardRef<
                     </div>
                   </div>
                   <p
-                    className="text-muted-foreground min-w-[92px] text-[11px] font-medium"
+                    className="text-muted-foreground mt-0.5 truncate text-[11px] font-medium"
                     aria-live="polite"
                   >
                     {statusLabel}
@@ -315,7 +487,7 @@ export const ConversationBar = React.forwardRef<
                       "active:scale-95 motion-reduce:transition-none",
                       isMuted ? "bg-foreground/5" : ""
                     )}
-                    disabled={!isConnected || isBusy}
+                    disabled={!isVoiceLive}
                   >
                     {isMuted ? <MicOff /> : <Mic />}
                   </Button>
@@ -330,7 +502,6 @@ export const ConversationBar = React.forwardRef<
                           keyboardOpen ? "Hide text composer" : "Show text composer"
                         }
                         className="relative active:scale-95 motion-reduce:transition-none"
-                        disabled={!isConnected || isBusy}
                       >
                         <Keyboard
                           className={
@@ -384,13 +555,14 @@ export const ConversationBar = React.forwardRef<
                   onKeyDown={handleKeyDown}
                   placeholder={textInputPlaceholder}
                   className="min-h-[100px] resize-none border-0 pr-12 shadow-none focus-visible:ring-0"
-                  disabled={!isConnected}
+                  disabled={agentState === "disconnecting"}
                 />
                 <Button
                   size="icon"
                   variant="ghost"
                   onClick={handleSendText}
-                  disabled={!textInput.trim() || !isConnected}
+                  aria-label="Send message"
+                  disabled={!textInput.trim() || isBusy}
                   className="absolute right-3 bottom-3 h-8 w-8"
                 >
                   <ArrowUpIcon className="h-4 w-4" />

@@ -129,6 +129,12 @@
     @apply bg-background text-foreground font-sans;
     background-image: radial-gradient(circle at 15% 20%, rgb(255 255 255 / 0.25), transparent 35%);
   }
+  /* The embed host must not paint this tool's page chrome into customer
+     sites; the widget's own pageBackground setting takes over instead. */
+  body:has([data-vw-embed]) {
+    background: transparent;
+    background-image: none;
+  }
 }
 
 @layer components {

@@ -12,9 +12,13 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ui/conversation"
-import { ConversationBar } from "@/components/ui/conversation-bar"
+import {
+  ConversationBar,
+  type AgentSessionState,
+  type SessionKind,
+} from "@/components/ui/conversation-bar"
 import { Message, MessageContent } from "@/components/ui/message"
-import { Orb } from "@/components/ui/orb"
+import { OrbLazy } from "@/components/ui/orb-lazy"
 import { Response } from "@/components/ui/response"
 import {
   Tooltip,
@@ -23,10 +27,9 @@ import {
 } from "@/components/ui/tooltip"
 import { type MessageStyle, type VoiceWidgetMode } from "@/components/widget/ui-config"
 
-interface ChatMessage {
-  role: "user" | "assistant"
-  content: string
-}
+type TranscriptEntry =
+  | { kind: "message"; role: "user" | "assistant"; content: string }
+  | { kind: "notice"; content: string }
 
 interface VoiceWidgetProps {
   agentId: string
@@ -41,6 +44,17 @@ interface VoiceWidgetProps {
   orbColors?: [string, string]
   assistantAvatarImageUrl?: string
   messageStyle?: MessageStyle
+  surfaceColor?: string
+  textColor?: string
+  userBubbleColor?: string
+  userBubbleTextColor?: string
+  assistantBubbleColor?: string
+  fontFamily?: string
+  languageOverride?: string
+  onSessionStateChange?: (
+    state: AgentSessionState,
+    kind: SessionKind | null
+  ) => void
   className?: string
 }
 
@@ -57,15 +71,52 @@ export function VoiceWidget({
   orbColors = ["#CADCFC", "#A0B9D1"],
   assistantAvatarImageUrl = "",
   messageStyle = "contained",
+  surfaceColor = "#eceae6",
+  textColor = "#090909",
+  userBubbleColor = "#c7eb68",
+  userBubbleTextColor = "#090909",
+  assistantBubbleColor = "#ffffff",
+  fontFamily = "",
+  languageOverride = "",
+  onSessionStateChange,
   className,
 }: VoiceWidgetProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [entries, setEntries] = useState<TranscriptEntry[]>([])
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const pendingUserEchoesRef = useRef<string[]>([])
+  const sessionWasConnectedRef = useRef(false)
   const isVoiceOnly = mode === "voice-only"
 
+  // The widget UI reads the same semantic tokens as the host site; scoping
+  // overrides here re-skins every nested primitive without global bleed.
+  const themeStyle = {
+    "--background": surfaceColor,
+    "--card": surfaceColor,
+    "--card-foreground": textColor,
+    "--foreground": textColor,
+    "--primary": userBubbleColor,
+    "--primary-foreground": userBubbleTextColor,
+    "--secondary": assistantBubbleColor,
+    "--secondary-foreground": textColor,
+    "--accent": `color-mix(in srgb, ${textColor} 8%, ${surfaceColor})`,
+    "--accent-foreground": textColor,
+    "--muted-foreground": `color-mix(in srgb, ${textColor} 62%, transparent)`,
+    fontFamily: fontFamily || undefined,
+  } as React.CSSProperties
+
+  const appendNotice = (content: string) => {
+    setEntries((prev) =>
+      prev.some((entry) => entry.kind === "message")
+        ? [...prev, { kind: "notice", content }]
+        : prev
+    )
+  }
+
   return (
-    <div className={cn("relative mx-auto h-[600px] w-full", className)}>
+    <div
+      className={cn("relative mx-auto h-[600px] w-full", className)}
+      style={themeStyle}
+    >
       <Card
         className={cn(
           "flex h-full w-full flex-col gap-0 overflow-hidden py-0",
@@ -84,7 +135,7 @@ export function VoiceWidget({
                   compact ? "p-4 pb-4" : "p-6 pb-6"
                 )}
               >
-                {messages.length === 0 ? (
+                {entries.length === 0 ? (
                   <ConversationEmptyState
                     icon={
                       <AssistantAvatar
@@ -97,19 +148,32 @@ export function VoiceWidget({
                     description={emptyStateDescription}
                   />
                 ) : (
-                  messages.map((message, index) => {
+                  entries.map((entry, index) => {
+                    if (entry.kind === "notice") {
+                      return (
+                        <div
+                          key={index}
+                          className="text-muted-foreground flex w-full items-center gap-3 py-1 text-[11px] font-medium"
+                        >
+                          <span className="bg-foreground/15 h-px flex-1" />
+                          {entry.content}
+                          <span className="bg-foreground/15 h-px flex-1" />
+                        </div>
+                      )
+                    }
+
                     return (
                       <div key={index} className="motion-gentle flex w-full flex-col gap-1 animate-in fade-in slide-in-from-bottom-1 duration-200">
-                        <Message from={message.role}>
+                        <Message from={entry.role}>
                           <MessageContent
                             className="max-w-full min-w-0"
                             variant={messageStyle}
                           >
                             <Response className="w-auto [overflow-wrap:anywhere] whitespace-pre-wrap">
-                              {message.content}
+                              {entry.content}
                             </Response>
                           </MessageContent>
-                          {message.role === "assistant" && (
+                          {entry.role === "assistant" && (
                             <AssistantAvatar
                               imageUrl={assistantAvatarImageUrl}
                               orbColors={orbColors}
@@ -117,7 +181,7 @@ export function VoiceWidget({
                             />
                           )}
                         </Message>
-                        {message.role === "assistant" && (
+                        {entry.role === "assistant" && (
                           <div className="flex items-center gap-1">
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -130,7 +194,7 @@ export function VoiceWidget({
                                     variant="ghost"
                                     onClick={() => {
                                       void navigator.clipboard
-                                        .writeText(message.content)
+                                        .writeText(entry.content)
                                         .catch(() => undefined)
                                       setCopiedIndex(index)
                                       setTimeout(
@@ -168,7 +232,15 @@ export function VoiceWidget({
               </ConversationContent>
               <ConversationScrollButton className="bottom-[100px]" />
             </Conversation>
-          ) : null}
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center pb-[72px]">
+              <AssistantAvatar
+                imageUrl={assistantAvatarImageUrl}
+                orbColors={orbColors}
+                className="size-24 overflow-hidden rounded-full"
+              />
+            </div>
+          )}
           <div className="absolute right-0 bottom-0 left-0 flex justify-center">
             <ConversationBar
               className={cn("w-full", compact ? "" : "max-w-2xl")}
@@ -176,22 +248,27 @@ export function VoiceWidget({
               textInputPlaceholder={textInputPlaceholder}
               allowTextInput={!isVoiceOnly}
               agentId={agentId}
+              languageOverride={languageOverride || undefined}
+              onSessionStateChange={onSessionStateChange}
               onConnect={() => {
-                setMessages([])
+                if (sessionWasConnectedRef.current) return
+                sessionWasConnectedRef.current = true
                 setCopiedIndex(null)
                 pendingUserEchoesRef.current = []
+                appendNotice("New conversation started")
               }}
               onDisconnect={() => {
-                setMessages([])
-                setCopiedIndex(null)
                 pendingUserEchoesRef.current = []
+                if (sessionWasConnectedRef.current) {
+                  sessionWasConnectedRef.current = false
+                  appendNotice("Conversation ended")
+                }
               }}
               onSendMessage={(message) => {
-                const userMessage: ChatMessage = {
-                  role: "user",
-                  content: message,
-                }
-                setMessages((prev) => [...prev, userMessage])
+                setEntries((prev) => [
+                  ...prev,
+                  { kind: "message", role: "user", content: message },
+                ])
                 pendingUserEchoesRef.current.push(message.trim())
               }}
               onMessage={(message) => {
@@ -204,11 +281,14 @@ export function VoiceWidget({
                   }
                 }
 
-                const newMessage: ChatMessage = {
-                  role: message.source === "user" ? "user" : "assistant",
-                  content: message.message,
-                }
-                setMessages((prev) => [...prev, newMessage])
+                setEntries((prev) => [
+                  ...prev,
+                  {
+                    kind: "message",
+                    role: message.source === "user" ? "user" : "assistant",
+                    content: message.message,
+                  },
+                ])
               }}
               onError={(error) => console.error("Conversation error:", error)}
             />
@@ -241,5 +321,5 @@ function AssistantAvatar({
     )
   }
 
-  return <Orb className={className} colors={orbColors} />
+  return <OrbLazy className={className} colors={orbColors} />
 }
