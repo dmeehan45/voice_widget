@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useRef, useSyncExternalStore } from "react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { VoiceWidget } from "@/components/widget/VoiceWidget"
 import { useStoredWidgetConfig } from "@/components/widget/use-stored-widget-config"
 import {
-  UI_CONFIG_LIMITS,
+  parseUiConfigParams,
   sanitizeWidgetUiConfig,
 } from "@/components/widget/ui-config"
 
@@ -18,98 +18,70 @@ interface EmbedWidgetPageProps {
   searchParams: Record<string, string | undefined>
 }
 
-function parseBoolean(value: string | undefined, fallback: boolean) {
-  if (value === "1" || value === "true") {
-    return true
-  }
-
-  if (value === "0" || value === "false") {
-    return false
-  }
-
-  return fallback
+function notifyParent(event: "connected" | "disconnected") {
+  if (typeof window === "undefined" || window.parent === window) return
+  window.parent.postMessage({ source: "voice-widget", event }, "*")
 }
 
-function parseHeight(value: string | undefined, fallback = UI_CONFIG_LIMITS.defaultHeight) {
-  const parsed = Number(value)
-
-  if (!Number.isFinite(parsed)) {
-    return fallback
-  }
-
-  return Math.min(UI_CONFIG_LIMITS.maxHeight, Math.max(UI_CONFIG_LIMITS.minHeight, Math.round(parsed)))
-}
-
-function parseRounded(
-  value: string | undefined,
-  fallback: "none" | "md" | "xl"
-): "none" | "md" | "xl" {
-  if (value === "none" || value === "md" || value === "xl") {
-    return value
-  }
-
-  return fallback
-}
-
-function parseMode(value: string | undefined): "voice-chat" | "voice-only" | undefined {
-  if (value === "voice-chat" || value === "voice-only") {
-    return value
-  }
-
-  return undefined
-}
-
-function parseMessageStyle(value: string | undefined): "contained" | "flat" | undefined {
-  if (value === "contained" || value === "flat") {
-    return value
-  }
-
-  return undefined
-}
+const subscribeNoop = () => () => {}
+const isTopLevelSnapshot = () => window.self === window.top
 
 export function EmbedWidgetPage({ searchParams }: EmbedWidgetPageProps) {
-  const { storedAgentId, storedUiConfig } = useStoredWidgetConfig()
+  const { storedAgentId, storedUiConfig, hydrated } = useStoredWidgetConfig()
+  // False while embedded and during server render — the config hint below
+  // must never flash on a customer's site.
+  const isTopLevel = useSyncExternalStore(
+    subscribeNoop,
+    isTopLevelSnapshot,
+    () => false
+  )
+  const hasConnectedRef = useRef(false)
 
-  const settings = useMemo(() => {
-    return {
-      agentId: searchParams.agentId?.trim(),
-      compact: parseBoolean(searchParams.compact, storedUiConfig.compact),
-      framed: parseBoolean(searchParams.framed, storedUiConfig.framed),
-      rounded: parseRounded(searchParams.rounded, storedUiConfig.rounded),
-      height: parseHeight(searchParams.height, storedUiConfig.height),
-      mode: parseMode(searchParams.mode) ?? storedUiConfig.mode,
-      brandLabel: searchParams.brandLabel ?? storedUiConfig.brandLabel,
-      textInputPlaceholder:
-        searchParams.textInputPlaceholder ?? storedUiConfig.textInputPlaceholder,
-      emptyStateTitle: searchParams.emptyStateTitle ?? storedUiConfig.emptyStateTitle,
-      emptyStateDescription:
-        searchParams.emptyStateDescription ?? storedUiConfig.emptyStateDescription,
-      orbPrimaryColor: searchParams.orbPrimaryColor ?? storedUiConfig.orbPrimaryColor,
-      orbSecondaryColor: searchParams.orbSecondaryColor ?? storedUiConfig.orbSecondaryColor,
-      assistantAvatarImageUrl:
-        searchParams.assistantAvatarImageUrl ?? storedUiConfig.assistantAvatarImageUrl,
-      messageStyle: parseMessageStyle(searchParams.messageStyle) ?? storedUiConfig.messageStyle,
-    }
+  const resolvedUiConfig = useMemo(() => {
+    // Query params win per field; the operator's saved browser config and
+    // then the defaults fill the gaps.
+    return sanitizeWidgetUiConfig({
+      ...storedUiConfig,
+      ...parseUiConfigParams(searchParams),
+    })
   }, [searchParams, storedUiConfig])
-  const resolvedUiConfig = sanitizeWidgetUiConfig(settings)
 
-  const resolvedAgentId = settings.agentId || storedAgentId || DEFAULT_AGENT_ID
+  const resolvedAgentId =
+    searchParams.agentId?.trim() || storedAgentId || DEFAULT_AGENT_ID
 
   if (!resolvedAgentId) {
+    // Wait for storage before declaring the widget unconfigured, so the
+    // operator's own saved agent ID doesn't flash the error card.
+    if (!hydrated) {
+      return <div style={{ height: resolvedUiConfig.height }} />
+    }
+
     return (
-      <div className="flex h-[600px] w-full items-center justify-center bg-transparent p-4">
-        <Card className="fletch-panel w-full max-w-md border-[3px] shadow-[0_2px_0_0_#000]">
+      <div
+        data-vw-embed
+        className="flex w-full items-center justify-center p-4"
+        style={{
+          height: resolvedUiConfig.height,
+          background: resolvedUiConfig.pageBackground,
+        }}
+      >
+        <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center text-sm">
-            <p className="text-lg font-black">Missing ElevenLabs agent ID</p>
+            <p className="text-lg font-black">Voice assistant unavailable</p>
             <p className="text-muted-foreground mt-2 text-sm">
-              Provide an <code>agentId</code> query parameter, or set your ID on
-              <code> /configure</code>.
+              This widget hasn&apos;t been connected to an agent yet.
             </p>
-            <div className="mt-4">
-              <Button asChild variant="brandOutline">
-                <Link href="/configure">Open /configure</Link>
-              </Button>
-            </div>
+            {isTopLevel && (
+              <div className="mt-4 space-y-2">
+                <p className="text-muted-foreground text-xs">
+                  Site owner? Add an <code>agentId</code> query parameter or
+                  save one in the configurator.
+                </p>
+                <Button asChild variant="brandOutline">
+                  <Link href="/configure">Open /configure</Link>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -117,7 +89,14 @@ export function EmbedWidgetPage({ searchParams }: EmbedWidgetPageProps) {
   }
 
   return (
-    <div className="w-full bg-transparent" style={{ height: resolvedUiConfig.height }}>
+    <div
+      data-vw-embed
+      className="w-full"
+      style={{
+        height: resolvedUiConfig.height,
+        background: resolvedUiConfig.pageBackground,
+      }}
+    >
       <VoiceWidget
         agentId={resolvedAgentId}
         compact={resolvedUiConfig.compact}
@@ -134,6 +113,22 @@ export function EmbedWidgetPage({ searchParams }: EmbedWidgetPageProps) {
         ]}
         assistantAvatarImageUrl={resolvedUiConfig.assistantAvatarImageUrl}
         messageStyle={resolvedUiConfig.messageStyle}
+        surfaceColor={resolvedUiConfig.surfaceColor}
+        textColor={resolvedUiConfig.textColor}
+        userBubbleColor={resolvedUiConfig.userBubbleColor}
+        userBubbleTextColor={resolvedUiConfig.userBubbleTextColor}
+        assistantBubbleColor={resolvedUiConfig.assistantBubbleColor}
+        fontFamily={resolvedUiConfig.fontFamily}
+        languageOverride={resolvedUiConfig.language}
+        onSessionStateChange={(state) => {
+          if (state === "connected") {
+            hasConnectedRef.current = true
+            notifyParent("connected")
+          } else if (state === "disconnected" && hasConnectedRef.current) {
+            hasConnectedRef.current = false
+            notifyParent("disconnected")
+          }
+        }}
         className="mx-0 h-full w-full"
       />
     </div>

@@ -1,42 +1,43 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import Link from "next/link"
-import { Menu } from "lucide-react"
+import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 
-import { Button } from "@/components/ui/button"
+import { SiteHeader } from "@/components/layout/SiteHeader"
 import { HowItWorks } from "@/components/landing/HowItWorks"
-import { WizardShell } from "@/components/wizard/WizardShell"
+import { WIZARD_STORAGE_KEY, WizardShell } from "@/components/wizard/WizardShell"
+
+const subscribeNoop = () => () => {}
+
+// Whether this tab already has wizard progress (checked once per load, after
+// hydration, so the wizard reopens automatically on refresh).
+function hasWizardProgressSnapshot() {
+  try {
+    return window.sessionStorage.getItem(WIZARD_STORAGE_KEY) !== null
+  } catch {
+    return false
+  }
+}
 
 export default function Home() {
   const [wizardStarted, setWizardStarted] = useState(false)
   const wizardRef = useRef<HTMLDivElement>(null)
+  const startedByClickRef = useRef(false)
+  const hasWizardProgress = useSyncExternalStore(
+    subscribeNoop,
+    hasWizardProgressSnapshot,
+    () => false
+  )
+  const showWizard = wizardStarted || hasWizardProgress
 
   useEffect(() => {
-    if (wizardStarted) {
+    if (wizardStarted && startedByClickRef.current) {
       wizardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
     }
   }, [wizardStarted])
 
   return (
     <main className="site-shell min-h-screen">
-      <header className="site-header">
-        <div className="site-logo">
-          <span className="site-logo-mark" />
-          <span>White Label VoiceWidget</span>
-        </div>
-        <div className="flex items-center gap-2 md:gap-3">
-          <Button asChild variant="brandOutline" className="hidden sm:inline-flex">
-            <Link href="/voice-chat">Standalone Demo</Link>
-          </Button>
-          <Button asChild variant="brandOutline" className="hidden md:inline-flex">
-            <Link href="/configure">Configure Widget</Link>
-          </Button>
-          <Button variant="brandOutline" size="icon" className="sm:hidden" aria-label="Menu">
-            <Menu />
-          </Button>
-        </div>
-      </header>
+      <SiteHeader />
 
       <section className="pt-4 md:pt-10">
         <div className="content-column section-stack mb-8">
@@ -48,9 +49,14 @@ export default function Home() {
           </p>
         </div>
 
-        <HowItWorks onGetStarted={() => setWizardStarted(true)} />
+        <HowItWorks
+          onGetStarted={() => {
+            startedByClickRef.current = true
+            setWizardStarted(true)
+          }}
+        />
 
-        {wizardStarted && (
+        {showWizard && (
           <div ref={wizardRef} className="mt-16 scroll-mt-8">
             <WizardShell />
           </div>

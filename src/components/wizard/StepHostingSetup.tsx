@@ -1,119 +1,55 @@
 "use client"
 
-import { ExternalLink } from "lucide-react"
+import { useState } from "react"
+import { CheckIcon, CopyIcon, ExternalLink } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { copyTextToClipboard } from "@/lib/clipboard"
 import { AGENT_ID_STORAGE_KEY } from "@/components/widget/VoiceWidgetHost"
+import { REPO_URL } from "@/components/widget/embed-code"
 import {
   UI_CONFIG_STORAGE_KEY,
   type WidgetUiConfig,
 } from "@/components/widget/ui-config"
-import type { HostingPath } from "@/components/wizard/WizardShell"
 
 interface StepHostingSetupProps {
-  hostingPath: HostingPath
   agentId: string
   uiConfig: WidgetUiConfig
-  onNext: (widgetSlug?: string) => void
+  onNext: () => void
   onBack: () => void
 }
 
 export function StepHostingSetup({
-  hostingPath,
   agentId,
   uiConfig,
   onNext,
   onBack,
 }: StepHostingSetupProps) {
-  if (hostingPath === "managed") {
-    return (
-      <ManagedSetup onNext={onNext} onBack={onBack} />
-    )
-  }
+  const [copiedEnv, setCopiedEnv] = useState(false)
 
-  return (
-    <SelfHostedSetup
-      agentId={agentId}
-      uiConfig={uiConfig}
-      onNext={() => onNext()}
-      onBack={onBack}
-    />
-  )
-}
+  const envLine = `NEXT_PUBLIC_ELEVENLABS_AGENT_ID=${agentId.trim()}`
+  const vercelDeployUrl = `https://vercel.com/new/clone?repository-url=${encodeURIComponent(
+    REPO_URL
+  )}&env=NEXT_PUBLIC_ELEVENLABS_AGENT_ID&envDescription=${encodeURIComponent(
+    "Optional default ElevenLabs agent ID used by /voice-chat"
+  )}`
+  const netlifyDeployUrl = `https://app.netlify.com/start/deploy?repository=${encodeURIComponent(
+    REPO_URL
+  )}`
 
-function ManagedSetup({
-  onNext,
-  onBack,
-}: {
-  onNext: (slug?: string) => void
-  onBack: () => void
-}) {
-  return (
-    <div className="section-stack">
-      <p className="hero-kicker">Step 4 &mdash; Managed Hosting</p>
-      <h2 className="text-3xl font-black tracking-tight">
-        We&apos;ll host it for you
-      </h2>
-      <p className="text-muted-foreground max-w-[48ch] text-base">
-        Sign in and subscribe to get your widget hosted on our platform with a
-        dedicated embed URL.
-      </p>
-
-      <div className="fletch-panel mt-4 space-y-5 p-6">
-        <div className="flex items-center gap-4 rounded-md border-2 border-dashed border-black/20 bg-white/60 p-6">
-          <div className="flex-1 space-y-2">
-            <p className="text-lg font-black">Coming Soon</p>
-            <p className="text-muted-foreground text-sm">
-              Managed hosting with OAuth sign-in and Stripe monthly subscription
-              is under development. For now, use the self-hosted path to get
-              your widget live.
-            </p>
-            <p className="text-muted-foreground text-sm">
-              When available, you&apos;ll be able to:
-            </p>
-            <ul className="text-muted-foreground mt-2 list-disc space-y-1 pl-5 text-sm">
-              <li>Sign in with Google or GitHub</li>
-              <li>Subscribe for a monthly hosting plan</li>
-              <li>Get a managed embed URL instantly</li>
-              <li>Manage your widget from a dashboard</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-6 flex gap-3">
-        <Button type="button" variant="brandOutline" onClick={onBack}>
-          Back
-        </Button>
-        <Button
-          type="button"
-          variant="brand"
-          onClick={() => onNext()}
-        >
-          Continue to Embed Code
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function SelfHostedSetup({
-  agentId,
-  uiConfig,
-  onNext,
-  onBack,
-}: {
-  agentId: string
-  uiConfig: WidgetUiConfig
-  onNext: () => void
-  onBack: () => void
-}) {
   const handleSaveToLocalStorage = () => {
     const trimmedAgentId = agentId.trim()
     if (trimmedAgentId) {
       window.localStorage.setItem(AGENT_ID_STORAGE_KEY, trimmedAgentId)
     }
     window.localStorage.setItem(UI_CONFIG_STORAGE_KEY, JSON.stringify(uiConfig))
+  }
+
+  const copyEnvLine = async () => {
+    if (await copyTextToClipboard(envLine)) {
+      setCopiedEnv(true)
+      window.setTimeout(() => setCopiedEnv(false), 2000)
+    }
   }
 
   return (
@@ -129,12 +65,13 @@ function SelfHostedSetup({
       <div className="fletch-panel mt-4 space-y-0 divide-y-2 divide-black/10 p-0">
         <DeployStep
           number={1}
-          title="Deploy this app"
-          description="Deploy the White Label VoiceWidget repository to your hosting provider."
+          title="Get the source and deploy it"
+          description="This widget is an open Next.js app. Fork or clone the repository, then deploy your copy to your hosting provider — the buttons below prefill everything."
         >
-          <div className="flex flex-wrap gap-2">
+          <code className="field-code block text-xs">git clone {REPO_URL}</code>
+          <div className="flex flex-wrap items-center gap-2">
             <a
-              href="https://vercel.com/new"
+              href={vercelDeployUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-sm border-2 border-black bg-black px-3 py-1.5 text-xs font-bold text-white"
@@ -142,31 +79,56 @@ function SelfHostedSetup({
               Deploy to Vercel <ExternalLink className="size-3" />
             </a>
             <a
-              href="https://app.netlify.com/start"
+              href={netlifyDeployUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-bold"
             >
               Deploy to Netlify <ExternalLink className="size-3" />
             </a>
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-semibold underline underline-offset-2"
+            >
+              View source on GitHub
+            </a>
           </div>
         </DeployStep>
 
         <DeployStep
           number={2}
-          title="Set your Agent ID"
-          description="Add this environment variable to your deployment:"
+          title="Optional: set a default Agent ID"
+          description="Your embed snippet already carries the agent ID, so this is only a fallback for the /voice-chat page. Note: NEXT_PUBLIC_ variables are baked in at build time — changing this later requires a redeploy."
         >
-          <code className="field-code block text-xs">
-            NEXT_PUBLIC_ELEVENLABS_AGENT_ID={agentId.trim()}
-          </code>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <code className="field-code block min-w-0 flex-1 text-xs">{envLine}</code>
+            <Button
+              type="button"
+              variant="brandOutline"
+              size="sm"
+              className="w-full md:w-auto"
+              onClick={() => void copyEnvLine()}
+            >
+              {copiedEnv ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
+              Copy
+            </Button>
+          </div>
         </DeployStep>
 
         <DeployStep
           number={3}
           title="Map your domain"
           description="Create a DNS CNAME record pointing your subdomain (e.g. widget.yourdomain.com) to your deployment. Ensure HTTPS is enabled — microphone access requires it."
-        />
+        >
+          <p className="text-muted-foreground text-xs">
+            Optional hardening: set an <code>EMBED_FRAME_ANCESTORS</code>{" "}
+            environment variable (e.g.{" "}
+            <code>https://www.yourdomain.com</code>) to control which sites are
+            allowed to embed your widget.
+          </p>
+        </DeployStep>
 
         <DeployStep
           number={4}
@@ -188,11 +150,10 @@ function SelfHostedSetup({
 
       <div className="mt-4 rounded-md border-2 border-black/10 bg-white/50 p-4">
         <p className="text-sm">
-          <strong>Save config to this browser:</strong> Click below to save your
-          Agent ID and widget settings to localStorage. This lets you preview
-          the widget locally at{" "}
-          <code className="text-xs">/embed</code> and{" "}
-          <code className="text-xs">/voice-chat</code>.
+          <strong>Save your settings in this browser</strong> so the local
+          previews at <code className="text-xs">/embed</code> and{" "}
+          <code className="text-xs">/voice-chat</code> use them. Continuing
+          saves automatically.
         </p>
         <Button
           type="button"
@@ -200,7 +161,7 @@ function SelfHostedSetup({
           className="mt-3"
           onClick={handleSaveToLocalStorage}
         >
-          Save to this browser
+          Save in this browser
         </Button>
       </div>
 

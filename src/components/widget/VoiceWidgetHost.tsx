@@ -11,8 +11,12 @@ interface VoiceWidgetHostProps {
 }
 
 export function VoiceWidgetHost({ defaultAgentId }: VoiceWidgetHostProps) {
-  const { storedAgentId, storedUiConfig: uiConfig } = useStoredWidgetConfig()
+  const { storedAgentId, storedUiConfig: uiConfig, hydrated } = useStoredWidgetConfig()
   const resolvedAgentId = storedAgentId ?? defaultAgentId
+
+  if (!hydrated && !resolvedAgentId) {
+    return <div className="relative mx-auto h-[600px] w-full" />
+  }
 
   if (!resolvedAgentId) {
     return (
@@ -44,6 +48,13 @@ export function VoiceWidgetHost({ defaultAgentId }: VoiceWidgetHostProps) {
       orbColors={[uiConfig.orbPrimaryColor, uiConfig.orbSecondaryColor]}
       assistantAvatarImageUrl={uiConfig.assistantAvatarImageUrl}
       messageStyle={uiConfig.messageStyle}
+      surfaceColor={uiConfig.surfaceColor}
+      textColor={uiConfig.textColor}
+      userBubbleColor={uiConfig.userBubbleColor}
+      userBubbleTextColor={uiConfig.userBubbleTextColor}
+      assistantBubbleColor={uiConfig.assistantBubbleColor}
+      fontFamily={uiConfig.fontFamily}
+      languageOverride={uiConfig.language}
       className="mx-0 h-full w-full"
     />
   )

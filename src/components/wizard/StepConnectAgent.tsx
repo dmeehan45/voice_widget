@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { AgentConnectionTest } from "@/components/widget/AgentConnectionTest"
 
 interface StepConnectAgentProps {
   agentId: string
@@ -49,6 +50,15 @@ export function StepConnectAgent({
             value={agentId}
             onChange={(e) => onChange(e.target.value)}
           />
+        </div>
+
+        <AgentConnectionTest agentId={agentId} />
+
+        <div className="border-2 border-black/10 bg-white/60 p-3 text-xs">
+          <strong>Protect your agent:</strong> the widget uses your public agent
+          ID, which is visible to anyone who inspects your site. In ElevenLabs,
+          open your agent&apos;s Security settings and restrict it to your
+          domains so others can&apos;t reuse it.
         </div>
       </div>
 

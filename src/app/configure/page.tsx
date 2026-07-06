@@ -1,62 +1,44 @@
 "use client"
 
 import Link from "next/link"
-import { CheckIcon, CopyIcon, Menu } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { AGENT_ID_STORAGE_KEY } from "@/components/widget/VoiceWidgetHost"
+import { SiteHeader } from "@/components/layout/SiteHeader"
+import { AgentConnectionTest } from "@/components/widget/AgentConnectionTest"
+import { buildEmbedPath } from "@/components/widget/embed-code"
 import {
-  DEFAULT_UI_CONFIG,
+  AGENT_ID_STORAGE_KEY,
+  useStoredWidgetConfig,
+} from "@/components/widget/use-stored-widget-config"
+import {
   UI_CONFIG_STORAGE_KEY,
+  parseUiConfigParams,
+  sanitizeWidgetUiConfig,
   type WidgetUiConfig,
-  parseStoredUiConfig,
 } from "@/components/widget/ui-config"
+import { EmbedSnippets } from "@/components/wizard/EmbedSnippets"
 import { WidgetConfigForm } from "@/components/wizard/WidgetConfigForm"
 
 const DEFAULT_AGENT_ID = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID ?? ""
 
-function getInitialAgentId() {
-  if (typeof window === "undefined") return DEFAULT_AGENT_ID
-  return window.localStorage.getItem(AGENT_ID_STORAGE_KEY) ?? DEFAULT_AGENT_ID
-}
-
-function getInitialUiConfig(): WidgetUiConfig {
-  if (typeof window === "undefined") return DEFAULT_UI_CONFIG
-  return parseStoredUiConfig(window.localStorage.getItem(UI_CONFIG_STORAGE_KEY))
-}
-
 export default function ConfigurePage() {
-  const [agentId, setAgentId] = useState(getInitialAgentId)
-  const [uiConfig, setUiConfig] = useState(getInitialUiConfig)
+  // Unedited fields track saved browser config (hydration-safe); edits
+  // shadow it until saved.
+  const { storedAgentId, storedUiConfig } = useStoredWidgetConfig()
+  const [agentIdEdit, setAgentIdEdit] = useState<string | null>(null)
+  const [uiConfigEdit, setUiConfigEdit] = useState<WidgetUiConfig | null>(null)
   const [saved, setSaved] = useState(false)
-  const [copiedField, setCopiedField] = useState<"url" | "code" | null>(null)
+  const [importValue, setImportValue] = useState("")
+  const [importStatus, setImportStatus] = useState<"idle" | "done" | "invalid">(
+    "idle"
+  )
 
-  const embedQuery = useMemo(() => {
-    const params = new URLSearchParams()
-    if (agentId.trim()) params.set("agentId", agentId.trim())
-    params.set("compact", String(uiConfig.compact))
-    params.set("framed", String(uiConfig.framed))
-    params.set("rounded", uiConfig.rounded)
-    params.set("height", String(uiConfig.height))
-    params.set("mode", uiConfig.mode)
-    params.set("brandLabel", uiConfig.brandLabel)
-    params.set("textInputPlaceholder", uiConfig.textInputPlaceholder)
-    params.set("emptyStateTitle", uiConfig.emptyStateTitle)
-    params.set("emptyStateDescription", uiConfig.emptyStateDescription)
-    params.set("orbPrimaryColor", uiConfig.orbPrimaryColor)
-    params.set("orbSecondaryColor", uiConfig.orbSecondaryColor)
-    params.set("assistantAvatarImageUrl", uiConfig.assistantAvatarImageUrl)
-    params.set("messageStyle", uiConfig.messageStyle)
-    return params.toString()
-  }, [agentId, uiConfig])
-
-  const embedPath = `/embed?${embedQuery}`
-  const getEmbedUrl = () =>
-    typeof window === "undefined" ? embedPath : new URL(embedPath, window.location.origin).toString()
-  const getEmbedCode = (src: string) =>
-    `<iframe src="${src}" title="Voice Chat Widget" width="100%" height="${uiConfig.height}" style="border:0;" allow="microphone"></iframe>`
+  const agentId = agentIdEdit ?? storedAgentId ?? DEFAULT_AGENT_ID
+  const uiConfig = uiConfigEdit ?? storedUiConfig
+  const setAgentId = (next: string) => setAgentIdEdit(next)
+  const setUiConfig = (next: WidgetUiConfig) => setUiConfigEdit(next)
 
   const handleSave = () => {
     const trimmedAgentId = agentId.trim()
@@ -66,65 +48,33 @@ export default function ConfigurePage() {
     setSaved(true)
   }
 
-  const copyWithFallback = (value: string) => {
-    const textarea = document.createElement("textarea")
-    textarea.value = value
-    textarea.setAttribute("readonly", "")
-    textarea.style.position = "absolute"
-    textarea.style.left = "-9999px"
-    document.body.appendChild(textarea)
-    textarea.select()
-
+  const handleImport = () => {
     try {
-      return document.execCommand("copy")
-    } finally {
-      document.body.removeChild(textarea)
-    }
-  }
+      const url = new URL(importValue.trim(), window.location.origin)
+      const params = Object.fromEntries(url.searchParams.entries())
+      const partial = parseUiConfigParams(params)
+      const importedAgentId = params.agentId?.trim()
 
-  const copyText = async (value: string, field: "url" | "code") => {
-    let copied = false
-
-    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-      try {
-        await navigator.clipboard.writeText(value)
-        copied = true
-      } catch {
-        copied = false
+      if (!importedAgentId && Object.keys(partial).length === 0) {
+        setImportStatus("invalid")
+        return
       }
-    }
 
-    if (!copied) {
-      copied = copyWithFallback(value)
+      setUiConfig(sanitizeWidgetUiConfig({ ...uiConfig, ...partial }))
+      if (importedAgentId) setAgentId(importedAgentId)
+      setImportValue("")
+      setImportStatus("done")
+      setSaved(false)
+    } catch {
+      setImportStatus("invalid")
     }
-
-    if (!copied) {
-      return
-    }
-
-    setCopiedField(field)
-    window.setTimeout(() => setCopiedField(null), 2000)
   }
+
+  const embedPath = buildEmbedPath(agentId, uiConfig)
 
   return (
     <main className="site-shell min-h-screen">
-      <header className="site-header">
-        <div className="site-logo">
-          <span className="site-logo-mark" />
-          <span>White Label VoiceWidget</span>
-        </div>
-        <div className="flex items-center gap-2 md:gap-3">
-          <Button asChild variant="brandOutline" className="hidden sm:inline-flex">
-            <Link href="/voice-chat">Standalone Demo</Link>
-          </Button>
-          <Button asChild variant="brandOutline" className="hidden md:inline-flex">
-            <Link href="/">Back To Guide</Link>
-          </Button>
-          <Button variant="brandOutline" size="icon" className="sm:hidden" aria-label="Menu">
-            <Menu />
-          </Button>
-        </div>
-      </header>
+      <SiteHeader />
 
       <Card className="fletch-panel border-[3px] shadow-[0_2px_0_0_#000]">
         <CardContent className="space-y-6 p-5 md:space-y-8 md:p-8">
@@ -132,9 +82,47 @@ export default function ConfigurePage() {
             <p className="hero-kicker">Customization Studio</p>
             <h1 className="text-4xl font-black tracking-tight">Configure Voice Widget</h1>
             <p className="text-muted-foreground editorial-copy max-w-[56ch] text-base">
-              Save your ElevenLabs Agent ID, customize widget UI, and copy an
+              Set your ElevenLabs Agent ID, customize the widget, and copy an
               embeddable snippet hosted on <code>/embed</code>.
             </p>
+          </div>
+
+          <div className="space-y-3 border-2 border-black/15 bg-white/40 p-4 text-sm md:p-5">
+            <p className="field-label">Already have an embed URL?</p>
+            <p className="text-muted-foreground text-xs">
+              Paste it here to load its settings into the form — no need to
+              re-enter anything.
+            </p>
+            <div className="flex flex-col gap-2 md:flex-row md:items-center">
+              <input
+                className="field-input min-w-0 flex-1"
+                placeholder="https://your-domain/embed?agentId=..."
+                value={importValue}
+                onChange={(e) => {
+                  setImportValue(e.target.value)
+                  setImportStatus("idle")
+                }}
+              />
+              <Button
+                type="button"
+                variant="brandOutline"
+                className="w-full md:w-auto"
+                disabled={!importValue.trim()}
+                onClick={handleImport}
+              >
+                Import settings
+              </Button>
+            </div>
+            {importStatus === "done" && (
+              <p className="text-xs font-medium text-green-800">
+                Settings imported. Review below, then save.
+              </p>
+            )}
+            {importStatus === "invalid" && (
+              <p className="text-destructive text-xs font-medium">
+                That doesn&apos;t look like a widget embed URL.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2 text-sm">
@@ -146,20 +134,23 @@ export default function ConfigurePage() {
             </ol>
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="agent-id" className="field-label">
-              ElevenLabs Agent ID
-            </label>
-            <input
-              id="agent-id"
-              className="field-input"
-              placeholder="agent_..."
-              value={agentId}
-              onChange={(event) => {
-                setAgentId(event.target.value)
-                setSaved(false)
-              }}
-            />
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <label htmlFor="agent-id" className="field-label">
+                ElevenLabs Agent ID
+              </label>
+              <input
+                id="agent-id"
+                className="field-input"
+                placeholder="agent_..."
+                value={agentId}
+                onChange={(event) => {
+                  setAgentId(event.target.value)
+                  setSaved(false)
+                }}
+              />
+            </div>
+            <AgentConnectionTest agentId={agentId} />
           </div>
 
           <WidgetConfigForm
@@ -170,47 +161,33 @@ export default function ConfigurePage() {
             }}
           />
 
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-            <Button type="button" variant="brand" className="w-full sm:w-auto" onClick={handleSave}>
-              Save and deploy
-            </Button>
-            {saved && (
-              <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center">
-                <p className="text-muted-foreground text-sm">Saved.</p>
-                <Button asChild variant="brandOutline" size="sm" className="w-full sm:w-auto">
-                  <Link href={embedPath}>Preview /embed</Link>
-                </Button>
-                <Button asChild variant="brandOutline" size="sm" className="w-full sm:w-auto">
-                  <Link href="/voice-chat">Open /voice-chat</Link>
-                </Button>
-              </div>
-            )}
+          <div className="space-y-2">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+              <Button type="button" variant="brand" className="w-full sm:w-auto" onClick={handleSave}>
+                Save settings
+              </Button>
+              {saved && (
+                <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center">
+                  <p className="text-muted-foreground text-sm">Saved.</p>
+                  <Button asChild variant="brandOutline" size="sm" className="w-full sm:w-auto">
+                    <Link href={embedPath}>Preview /embed</Link>
+                  </Button>
+                  <Button asChild variant="brandOutline" size="sm" className="w-full sm:w-auto">
+                    <Link href="/voice-chat">Open /voice-chat</Link>
+                  </Button>
+                </div>
+              )}
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Saving stores your settings in this browser for previews. Your
+              live widget is configured entirely by the embed snippet below —
+              nothing is deployed from here.
+            </p>
           </div>
 
-          <div className="space-y-3 border-2 border-black/15 bg-white/40 p-4 text-sm md:p-5">
-            <p className="field-label">Embeddable widget URL</p>
-            <div className="flex flex-col gap-2 md:flex-row md:items-center">
-              <code className="field-code flex-1">{embedPath}</code>
-              <Button type="button" variant="brandOutline" className="w-full md:w-auto" onClick={() => copyText(getEmbedUrl(), "url")}>
-                {copiedField === "url" ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
-                Copy URL
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-3 border-2 border-black/15 bg-white/40 p-4 text-sm md:p-5">
-            <p className="field-label">Copy/paste iframe code</p>
-            <div className="flex flex-col gap-2 md:flex-row md:items-start">
-              <pre className="field-code max-h-48 flex-1 whitespace-pre-wrap p-3">{getEmbedCode(embedPath)}</pre>
-              <Button type="button" variant="brandOutline" className="w-full md:w-auto" onClick={() => copyText(getEmbedCode(getEmbedUrl()), "code")}>
-                {copiedField === "code" ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
-                Copy code
-              </Button>
-            </div>
-          </div>
+          <EmbedSnippets agentId={agentId} uiConfig={uiConfig} />
         </CardContent>
       </Card>
     </main>
   )
 }
-
